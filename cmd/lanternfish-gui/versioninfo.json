@@ -1,0 +1,13 @@
+{
+  "FixedFileInfo": {
+    "FileVersion": {"Major": 0, "Minor": 1, "Patch": 0, "Build": 0},
+    "ProductVersion": {"Major": 0, "Minor": 1, "Patch": 0, "Build": 0}
+  },
+  "StringFileInfo": {
+    "CompanyName": "Lanternfish",
+    "FileDescription": "Lanternfish — free web security toolkit (desktop app)",
+    "ProductName": "Lanternfish",
+    "LegalCopyright": "MIT License"
+  },
+  "IconPath": "../../assets/icon.ico"
+}
