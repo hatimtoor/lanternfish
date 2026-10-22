@@ -11,9 +11,21 @@ proxy, a request replayer, and an active + passive vulnerability scanner. Lanter
 runs headless with JSON output, so it fits scripts and CI as easily as a
 terminal.
 
+## Why Lanternfish exists
+
+Learning web security often means paying for a commercial tool like Burp Suite
+Professional. For a lot of people — students, self-taught beginners, folks in
+places where that price is out of reach — the cost is the wall that stops them
+before they start. Lanternfish exists to remove that wall: it's free and
+open-source, it covers the everyday web-testing workflow, and it teaches as you
+use it. Every finding comes with an explanation, and a built-in practice range
+(`lanternfish lab`) gives you somewhere legal to learn. If you couldn't afford
+the paid tools, this is for you.
+
 Lanternfish is an independent, clean-room project. It implements publicly documented
 security-testing techniques (OWASP Testing Guide, CWE) and contains no code
-from any other product.
+from any other product. It is not affiliated with or derived from Burp Suite or
+PortSwigger.
 
 ## Authorized use only
 
