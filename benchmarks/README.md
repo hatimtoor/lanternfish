@@ -45,16 +45,44 @@ should fire — this is how false positives are measured).
 
 ## Pointing it at external corpora
 
-The same harness scores any target you can label. These free, deliberately
-vulnerable projects are the standard ones (run each on your own machine, then
-write a spec for it):
+The same harness scores any target you can label. Only run these against
+instances you control.
 
-- **WAVSEP** — the Web Application Vulnerability Scanner Evaluation Project,
-  built specifically to score scanners with true/false-positive cases.
-- **OWASP Benchmark** — a large labeled Java app with a known answer key.
-- **OWASP Juice Shop**, **WebGoat**, **DVWA**, **bWAPP** — broad, well-known
-  vulnerable apps. **VAmPI** is a good labeled API target.
+### OWASP Benchmark (has an answer key → auto-generate the spec)
 
-Only run these against instances you control. Write a `*.json` spec mapping
-their vulnerable and safe endpoints, commit it here, and track the score as the
-checks improve. A pull request that moves the numbers should say so.
+The OWASP Benchmark ships `expectedresults-*.csv` labeling every test as a real
+vulnerability or not. Convert it straight into a spec:
+
+```
+go run ./tools/benchspec -base http://localhost:8443 expectedresults-1.2.csv > benchmarks/owasp-benchmark.json
+lanternfish bench benchmarks/owasp-benchmark.json
+```
+
+The converter maps the categories a black-box scanner can observe
+(path traversal, SQLi, XSS, command/LDAP/XPath injection, cookie flags) and
+skips the source-level ones (crypto, hashing, weak randomness, trust boundary)
+that no proxy-based scanner can see.
+
+> Caveat: many Benchmark endpoints only trigger with specific parameters or a
+> POST body, which a single GET per path will not exercise, so a raw run
+> under-reports. Treat the generated spec as a labeling starting point; for full
+> coverage, drive the endpoints with the right requests (e.g. via crawling).
+
+### WAVSEP, Juice Shop, WebGoat, DVWA, bWAPP, VAmPI
+
+These have no single machine-readable answer key, so write the spec by hand:
+run the app, note which endpoints are vulnerable (and which are safe), and list
+them as `expect` / `clean` cases in a `*.json` spec. Commit it here and track
+the score as the checks improve. A pull request that moves the numbers should
+say so.
+
+## Keeping signatures fresh (separate from benchmarking)
+
+The secret and vulnerable-library databases are refreshed from gitleaks and
+retire.js by `scripts/update-signatures.sh` (see `../CONTRIBUTING.md`). That is
+a different pipeline from the benchmark; both feed accuracy.
+
+**On nuclei:** nuclei's templates are a different execution model (per-template
+YAML with its own request/matcher language), not a signature list, so they are
+not synced here. Running them would mean building a nuclei-template interpreter
+— a separate, larger project rather than a database refresh.
