@@ -61,6 +61,8 @@ func main() {
 		cmdScan(os.Args[2:])
 	case "explain":
 		cmdExplain(os.Args[2:])
+	case "bench":
+		cmdBench(os.Args[2:])
 	case "guide":
 		cmdGuide(os.Args[2:])
 	case "auto":
@@ -115,6 +117,7 @@ usage:
   lanternfish scan    <url> [--insecure] [--json] [--fast]    active+passive scan of a URL
   lanternfish auto    <url> [--browser] [--fast] [--json]     autopilot: crawl + audit everything, one command
   lanternfish explain <check> | --list                        explain a finding: why it matters, how to confirm/fix
+  lanternfish bench   <spec.json> [--fast] [--json]           score detection + false positives against a labeled benchmark
   lanternfish lab     [--addr 127.0.0.1:9000]                  practice range: legal, vulnerable challenges to learn on
   lanternfish guide   <url>                                    narrated, step-by-step first assessment (great for learning)
   lanternfish crawl   <seed> [--audit] [--max N] [--json]     crawl a site; optionally audit findings

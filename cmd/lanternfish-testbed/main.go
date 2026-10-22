@@ -229,6 +229,19 @@ window.addEventListener('message',function(e){ document.getElementById('out').in
 </script></body></html>`)
 	})
 
+	// A genuinely safe endpoint: input is HTML-escaped, no injection sinks, and
+	// hardening headers are set. The scanner should find nothing high/critical
+	// here — it exists to measure false positives.
+	mux.HandleFunc("/safe", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Cache-Control", "no-store")
+		q := r.URL.Query().Get("q")
+		esc := strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;", "'", "&#39;").Replace(q)
+		fmt.Fprintf(w, "<html><body><p>You searched for: %s</p></body></html>", esc)
+	})
+
 	mux.HandleFunc("/.git/config", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = https://github.com/example/app.git\n"))
 	})

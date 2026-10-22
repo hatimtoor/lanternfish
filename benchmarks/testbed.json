@@ -1,0 +1,23 @@
+{
+  "name": "Lanternfish testbed",
+  "base": "http://127.0.0.1:9000",
+  "cases": [
+    {"path": "/search?q=hi",                 "expect": ["reflected-xss"]},
+    {"path": "/product?id=1",                "expect": ["sqli"]},
+    {"path": "/download?file=report.pdf",    "expect": ["path-traversal"]},
+    {"path": "/include?f=home",              "expect": ["lfi"]},
+    {"path": "/go?next=/home",               "expect": ["open-redirect"]},
+    {"path": "/render?name=Guest",           "expect": ["ssti"]},
+    {"path": "/dir?u=admin",                 "expect": ["ldap-injection"]},
+    {"path": "/find?q=1",                    "expect": ["xpath-injection"]},
+    {"path": "/users?u=admin",               "expect": ["nosql-injection"]},
+    {"path": "/fetch?url=http://example.com", "expect": ["blind-ssrf"], "note": "needs the OAST listener (not --fast)"},
+    {"path": "/track",                       "expect": ["reflected-xss"], "note": "reflected via the User-Agent header"},
+    {"path": "/files/report.pdf",            "expect": ["path-traversal"], "note": "injected via the URL path segment"},
+    {"path": "/api/graphql",                 "expect": ["graphql-introspection"]},
+    {"path": "/cors",                        "expect": ["cors-misconfig"]},
+    {"path": "/app.js",                      "expect": ["source-map-disclosure"]},
+    {"path": "/leaky",                       "expect": ["pii-credit-card"]},
+    {"path": "/safe?q=hello",                "clean": true, "note": "escaped output + hardening headers: expect no high/critical finding"}
+  ]
+}
