@@ -1,0 +1,48 @@
+name: Missed finding (false negative)
+description: Lanternfish did not report a vulnerability that is actually present.
+title: "[missed] <vulnerability class> — <short summary>"
+labels: ["false-negative", "accuracy"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks — missed findings are how coverage grows. If you can reproduce it
+        on a target you are allowed to test (or a deliberately vulnerable app like
+        the built-in `lanternfish lab`), even better.
+
+        Redact anything sensitive before submitting.
+  - type: input
+    id: class
+    attributes:
+      label: Vulnerability class
+      description: e.g. SQL injection, SSRF, stored XSS, IDOR.
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: Request that proves the vulnerability
+      description: The HTTP request that demonstrates the issue (redacted).
+      render: http
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence it is real
+      description: Response excerpt, timing, or out-of-band callback that confirms it.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What Lanternfish did instead
+      description: What you ran and what it reported (or didn't).
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Lanternfish version
+    validations:
+      required: true

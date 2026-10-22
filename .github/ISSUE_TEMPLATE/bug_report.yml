@@ -1,0 +1,33 @@
+name: Bug report
+description: Something crashed, errored, or behaved wrong (not an accuracy issue).
+title: "[bug] <short summary>"
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what actually happened.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact command(s) and any relevant output or error.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and version
+      placeholder: Windows 11 / Ubuntu 24.04 / macOS 15
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Lanternfish version
+    validations:
+      required: true

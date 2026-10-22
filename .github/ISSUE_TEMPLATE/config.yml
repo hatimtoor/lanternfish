@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Getting started and how to learn
+    url: https://github.com/hatimtoor/lanternfish/blob/main/docs/getting-started.md
+    about: New to security testing? Start here, then try `lanternfish lab`.
+  - name: Security issue in Lanternfish itself
+    url: https://github.com/hatimtoor/lanternfish/blob/main/SECURITY.md
+    about: Please report vulnerabilities in the tool privately, not as a public issue.

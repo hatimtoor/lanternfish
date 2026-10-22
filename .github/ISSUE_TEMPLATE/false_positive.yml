@@ -1,0 +1,51 @@
+name: False positive (reported something that isn't real)
+description: Lanternfish reported a finding that is not actually a vulnerability.
+title: "[false positive] <check id> — <short summary>"
+labels: ["false-positive", "accuracy"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping Lanternfish get more accurate. Every confirmed false
+        positive becomes a regression test so it can never come back.
+
+        Please remove or redact anything sensitive (real hosts, tokens, PII)
+        before submitting — a minimal example that still reproduces is ideal.
+  - type: input
+    id: check
+    attributes:
+      label: Check id
+      description: The `check` field of the finding (e.g. reflected-xss, sqli-error).
+      placeholder: reflected-xss
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: Request that triggered the finding
+      description: The full HTTP request Lanternfish flagged (redacted).
+      render: http
+    validations:
+      required: true
+  - type: textarea
+    id: response
+    attributes:
+      label: Response
+      description: The response that led to the finding (redacted, trimmed is fine).
+      render: http
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this is not a real vulnerability
+      description: Explain what makes this a false alarm.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Lanternfish version
+      description: Output of `lanternfish version`.
+    validations:
+      required: true
