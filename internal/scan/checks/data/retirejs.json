@@ -1,0 +1,410 @@
+[
+  {
+    "name": "@angular/core",
+    "regex": "/\\*\\*[\\s*]+@license Angular v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "22.1.0",
+    "issue": "medium severity issue: Angular: Sanitization bypass via directive host bindings on concrete host elements in @angular/core and @angular/c..."
+  },
+  {
+    "name": "AlaSQL",
+    "regex": "/\\*!?[ \n]*AlaSQL v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "0.7.0",
+    "issue": "high severity issue: An arbitrary code execution exists as AlaSQL doesn't sanitize input when characters are placed between square bracke..."
+  },
+  {
+    "name": "Angularjs",
+    "regex": "/\\*[\\*\\s]+(?:@license )?AngularJS(?: NES)? v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "999.999.999",
+    "issue": "medium severity issue: angular vulnerable to regular expression denial of service (ReDoS)"
+  },
+  {
+    "name": "Axios",
+    "regex": "/\\*!? *[Aa]xios v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+)) ",
+    "below": "1.20.0",
+    "issue": "medium severity issue: Axios: Prototype-Pollution Gadget in the Default Instance Allows Inherited Object.prototype.method to Override HTT..."
+  },
+  {
+    "name": "Backbone.js",
+    "regex": "//[ ]+Backbone.js ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "0.5.0",
+    "issue": "medium severity issue: cross-site scripting vulnerability"
+  },
+  {
+    "name": "Blueimp-file-upload",
+    "regex": "/\\*[\\s*]+jQuery File Upload User Interface Plugin ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))[\\s*]+https://github.com/blueimp",
+    "below": "9.22.1",
+    "issue": "high severity issue: Unrestricted Upload of File with Dangerous Type in blueimp-file-upload"
+  },
+  {
+    "name": "Bootstrap",
+    "regex": "/\\*!? Bootstrap v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "4.3.1",
+    "issue": "medium severity issue: XSS in data-template, data-content and data-title properties of tooltip/popover"
+  },
+  {
+    "name": "Bootstrap-select",
+    "regex": "/\\*![\\s]+\\*[\\s]+Bootstrap-select[\\s]+v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.13.6",
+    "issue": "medium severity issue: Cross-site Scripting (XSS) via title and data-content"
+  },
+  {
+    "name": "C3",
+    "regex": "[\\s]+var c3 ?= ?\\{ ?version: ?['\"]((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))['\"] ?\\};[\\s]+var c3_chart_fn,",
+    "below": "0.4.11",
+    "issue": "medium severity issue: Cross-Site Scripting in c3"
+  },
+  {
+    "name": "Chart.js",
+    "regex": "var version=\"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))\";const KNOWN_POSITIONS=\\[\"top\",\"bottom\",\"left\",\"right\",\"chartArea\"\\]",
+    "below": "2.9.4",
+    "issue": "high severity issue: Prototype pollution in chart.js"
+  },
+  {
+    "name": "Ckeditor",
+    "regex": "ckeditor..js.{4,30}=\\{timestamp:\"[^\"]+\",version:\"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "4.21.0",
+    "issue": "medium severity issue: cross-site scripting vulnerability has been discovered affecting Iframe Dialog and Media Embed packages. The vulne..."
+  },
+  {
+    "name": "Ckeditor5",
+    "regex": "const .=\"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))\"[,;].{0,140}?\\.CKEDITOR_VERSION=.;",
+    "below": "46.0.3",
+    "issue": "low severity issue: A Cross-Site Scripting (XSS) vulnerability exists in the CKEditor 5 clipboard package. It can be triggered by specifi..."
+  },
+  {
+    "name": "DOMPurify",
+    "regex": "DOMPurify.version = '((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))';",
+    "below": "3.4.16",
+    "issue": "low severity issue: DOMPurify: IN_PLACE returns a force-removed rawtext root whose text carries attacker markup — pure HTML reparse exe..."
+  },
+  {
+    "name": "DWR",
+    "regex": " dwr-((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+)).jar",
+    "below": "2.0.11",
+    "issue": "medium severity issue: CVE-2014-5326, CVE-2014-5325"
+  },
+  {
+    "name": "Dojo",
+    "regex": "/(?:dojo-)?((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))(?:/dojo)?/dojo(\\.min)?\\.js",
+    "below": "1.16.5",
+    "issue": "high severity issue: Prototype pollution"
+  },
+  {
+    "name": "EasyXDM",
+    "regex": " \\* easyXDM\n \\* http://easyxdm.net/(?:\r|\n|.)+version:\"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))\"",
+    "below": "2.5.0",
+    "issue": "medium severity issue: This tightens down the default origin whitelist in the CORS example."
+  },
+  {
+    "name": "Echarts",
+    "regex": "'((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))';[\\s]+var dependencies = \\{[\\s]+zrender: '[0-9.]+'[\\s]+\\};[\\s]+var TEST_FRAME_REMAIN_TIME = 1;",
+    "below": "6.1.0",
+    "issue": "medium severity issue: Apache ECharts has a cross-site scripting (XSS) vulnerability"
+  },
+  {
+    "name": "Ember",
+    "regex": "Project:   Ember -(?:.*\n){9,11}// Version: v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "4.8.1",
+    "issue": "high severity issue: Prototype pollution"
+  },
+  {
+    "name": "ExtJS",
+    "regex": "/*!\n * Ext JS Library ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "6.6.0",
+    "issue": "medium severity issue: XSS in Sencha Ext JS 4 to 6 via getTip() method of Action Columns"
+  },
+  {
+    "name": "Flowplayer",
+    "regex": "flowplayer-((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))(\\.min)?\\.js",
+    "below": "5.4.3",
+    "issue": "medium severity issue: XSS vulnerability in Flash fallback"
+  },
+  {
+    "name": "Froala",
+    "regex": "/\\*![\\s]+\\* froala_editor v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "4.3.1",
+    "issue": "medium severity issue: Froala WYSIWYG editor allows cross-site scripting (XSS)"
+  },
+  {
+    "name": "Handlebars",
+    "regex": "Handlebars.VERSION = \"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))\";",
+    "below": "4.7.10",
+    "issue": "critical severity issue: Handlebars: JavaScript Injection via Own Property Check Bypass"
+  },
+  {
+    "name": "Highcharts",
+    "regex": "product:\"Highcharts\",version:\"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))\"",
+    "below": "9.0.0",
+    "issue": "high severity issue: Cross-site Scripting (XSS) and Prototype Pollution in Highcharts \u003c 9.0.0"
+  },
+  {
+    "name": "Highlightjs",
+    "regex": "/\\*!\\s*[Hh]ighlight.js v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "10.4.1",
+    "issue": "medium severity issue: Multiple grammars in highlight.js prior to version 10.4.1 contain regular expressions with exponential or polynomi..."
+  },
+  {
+    "name": "JPlayer",
+    "regex": "/\\*!?[\n *]+jPlayer Plugin for jQuery (?:.*\n){1,10}[ *]+Version: ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "2.3.1",
+    "issue": "medium severity issue: XSS vulnerability in actionscript/Jplayer.as in the Flash SWF component"
+  },
+  {
+    "name": "Jquery",
+    "regex": "/\\*!? jQuery v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "3.5.0",
+    "issue": "medium severity issue: passing HTML containing \u003coption\u003e elements from untrusted sources - even after sanitizing it - to one of jQuery's D..."
+  },
+  {
+    "name": "Jquery-migrate",
+    "regex": "/\\*!?(?:\n \\*)? jQuery Migrate(?: -)? v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.2.2",
+    "issue": "medium severity issue: Selector interpreted as HTML"
+  },
+  {
+    "name": "Jquery-mobile",
+    "regex": "/\\*!?[\\s*]*jQuery Mobile(?: -)? v?((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "999.999.999",
+    "issue": "high severity issue: open redirect leads to cross site scripting"
+  },
+  {
+    "name": "Jquery-ui",
+    "regex": "/\\*!? jQuery UI - v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.13.2",
+    "issue": "medium severity issue: XSS when refreshing a checkboxradio with an HTML-like initial text label"
+  },
+  {
+    "name": "Jquery-ui-dialog",
+    "regex": "/\\*!? jQuery UI - v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))(.*\n){1,3}.*jquery\\.ui\\.dialog\\.js",
+    "below": "1.12.0",
+    "issue": "medium severity issue: XSS Vulnerability on closeText option"
+  },
+  {
+    "name": "Jquery-ui-tooltip",
+    "regex": "/\\*!? jQuery UI - v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))(.*\n){1,3}.*jquery\\.ui\\.tooltip\\.js",
+    "below": "1.10.0",
+    "issue": "medium severity issue: Cross-site scripting (XSS) vulnerability in the default content option in jquery.ui.tooltip"
+  },
+  {
+    "name": "Jquery-validation",
+    "regex": "/\\*!?(?:\n \\*)?[\\s]*jQuery Validation Plugin -? ?v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.20.0",
+    "issue": "medium severity issue: Potential XSS via showLabel"
+  },
+  {
+    "name": "Jquery.datatables",
+    "regex": "http://www.datatables.net\n +DataTables ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.11.3",
+    "issue": "low severity issue: possible XSS"
+  },
+  {
+    "name": "Jquery.prettyPhoto",
+    "regex": "/\\*[\r\n -]+Class: prettyPhoto(?:.*\n){1,3}[ ]*Version: ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "3.1.6",
+    "issue": "high severity issue"
+  },
+  {
+    "name": "Jquery.terminal",
+    "regex": "version ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))[\\s]+\\*[\\s]+\\* This file is part of jQuery Terminal.",
+    "below": "2.31.1",
+    "issue": "low severity issue: jquery.terminal self XSS on user input"
+  },
+  {
+    "name": "Jszip",
+    "regex": "/\\*![\\s]+JSZip v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+)) ",
+    "below": "3.8.0",
+    "issue": "medium severity issue: Santize filenames when files are loaded with loadAsync, to avoid “zip slip” attacks."
+  },
+  {
+    "name": "Knockout",
+    "regex": "(?:\\*|//) Knockout JavaScript library v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "3.5.0",
+    "issue": "medium severity issue: XSS injection point in attr name binding for browser IE7 and older"
+  },
+  {
+    "name": "Lodash",
+    "regex": "/\\*[\\s*!]+(?:@license)?[\\s*]+(?:Lo-Dash|lodash|Lodash) v?((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))[\\s\\S]{1,200}Build: `lodash modern -o",
+    "below": "4.18.0",
+    "issue": "medium severity issue: Lodash 4.17.23 and earlier are vulnerable to a prototype pollution bypass in _.unset and _.omit. The fix for CVE-2..."
+  },
+  {
+    "name": "Markdown-it",
+    "regex": "/\\*! markdown-it(?:-ins)? ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "15.0.3",
+    "issue": "high severity issue: markdown-it: Quadratic-time rendering of a single multi-line link reference definition with default options (regress..."
+  },
+  {
+    "name": "Marked",
+    "regex": "/[!*\\s/]+[\\s]marked v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "18.0.2",
+    "issue": "high severity issue: Marked 18.0.0 is vulnerable to Denial of Service via memory exhaustion from infinite recursion. A specific 3-byte in..."
+  },
+  {
+    "name": "Mathjax",
+    "regex": "\\.MathJax\\.config\\.startup;{10,100}.\\.VERSION=\"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))\"",
+    "below": "2.7.10",
+    "issue": "high severity issue: MathJax Regular expression Denial of Service (ReDoS)"
+  },
+  {
+    "name": "Moment.js",
+    "regex": "//!? moment.js(?:[\n\r]+)//!? version : ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "2.31.0",
+    "issue": "medium severity issue: moment vulnerable to Path Traversal via crafted non-string locale name"
+  },
+  {
+    "name": "Mootools",
+    "regex": "this\\.MooTools\\s*=\\s*\\{[\\s\\S]{0,30}version:\\s*['\"]((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))['\"]",
+    "below": "1.5.3",
+    "issue": "high severity issue: MooTools is a collection of JavaScript utilities for JavaScript developers. All known versions include a CSS selecto..."
+  },
+  {
+    "name": "Mustache.js",
+    "regex": "name:\\s*['\"]mustache.js['\"],\\s*version:\\s*['\"]((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))['\"]",
+    "below": "2.2.1",
+    "issue": "high severity issue: weakness in HTML escaping"
+  },
+  {
+    "name": "Nextjs",
+    "regex": "document\\.getElementById\\(\"__NEXT_DATA__\"\\)\\.textContent\\);window\\.__NEXT_DATA__=.;.\\.version=\"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))\"",
+    "below": "16.3.8",
+    "issue": "low severity issue: Next.js has information disclosure in development server's Model Context Protocol endpoint"
+  },
+  {
+    "name": "Pdf.js",
+    "regex": "(?:const|var) pdfjsVersion = ['\"]((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))['\"];",
+    "below": "6.2.108",
+    "issue": "high severity issue: PDF.js: Arbitrary JavaScript execution upon opening a malicious PDF"
+  },
+  {
+    "name": "Pendo",
+    "regex": "// Pendo Agent Wrapper\n//[\\s]+Environment:[\\s]+[^\n]+\n// Agent Version:[\\s]+((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "2.15.18",
+    "issue": "medium severity issue: Patched XSS vulnerability around script loading"
+  },
+  {
+    "name": "Plupload",
+    "regex": "\\* Plupload - multi-runtime File Uploader(?:\r|\n)+ \\* v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "3.1.5",
+    "issue": "medium severity issue: Fixed another case of html entities not being encoded that could be exploded by uploading a file name with html in..."
+  },
+  {
+    "name": "Protobufjs",
+    "regex": "protobuf\\.js v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "8.6.6",
+    "issue": "medium severity issue: protobufjs: Denial of Service via infinite loop in .proto option parsing"
+  },
+  {
+    "name": "Prototypejs",
+    "regex": "Prototype JavaScript framework, version ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.7.4",
+    "issue": "high severity issue: An issue was discovered in the stripTags and unescapeHTML components in Prototype 1.7.3 where an attacker can cause ..."
+  },
+  {
+    "name": "Quill",
+    "regex": "Quill Editor v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "2.0.4",
+    "issue": "low severity issue: Quill 2.0.3 is vulnerable to Cross-Site Scripting (XSS) via insufficient data validation in the HTML export feature, ..."
+  },
+  {
+    "name": "React",
+    "regex": "/\\*\\*\n +\\* React \\(with addons\\) ?v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "16.4.2",
+    "issue": "medium severity issue: potential XSS vulnerability when the attacker controls an attribute name"
+  },
+  {
+    "name": "React-dom",
+    "regex": "version:\"((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))[a-z0-9\\-]*\"[\\s,]*rendererPackageName:\"react-dom\"",
+    "below": "16.4.2",
+    "issue": "medium severity issue: Affected versions of `react-dom` are vulnerable to Cross-Site Scripting (XSS). The package fails to validate attri..."
+  },
+  {
+    "name": "Retire-example",
+    "regex": "/\\*!? Retire-example v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "0.0.2",
+    "issue": "low severity issue: bug summary"
+  },
+  {
+    "name": "Select2",
+    "regex": "/\\*!(?:[\\s]+\\*)? Select2 ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "4.0.6",
+    "issue": "medium severity issue: Improper Neutralization of Input During Web Page Generation in Select2"
+  },
+  {
+    "name": "Sessvars",
+    "regex": "sessvars ver ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.01",
+    "issue": "low severity issue: Unsanitized data passed to eval()"
+  },
+  {
+    "name": "Svelte",
+    "regex": "generated by Svelte v\\$\\{['\"]((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))['\"]\\}",
+    "below": "5.55.7",
+    "issue": "medium severity issue: Svelte is vulnerable to XSS when spread syntax is used to render attributes from untrusted data, because event han..."
+  },
+  {
+    "name": "Swfobject",
+    "regex": "SWFObject v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+)) ",
+    "below": "2.1",
+    "issue": "medium severity issue: DOM-based XSS"
+  },
+  {
+    "name": "Swiper",
+    "regex": "\\* Swiper ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "12.1.2",
+    "issue": "critical severity issue: Swiper versions \u003e=6.5.1 and \u003c12.1.2 are vulnerable to Prototype Pollution that bypasses a previous fix. The inde..."
+  },
+  {
+    "name": "Tableexport.jquery.plugin",
+    "regex": "/\\*[\\s]+tableExport.jquery.plugin[\\s]+Version ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.25.0",
+    "issue": "medium severity issue: There is a cross-site scripting vulnerability with default `onCellHtmlData`"
+  },
+  {
+    "name": "Threejs",
+    "regex": "/three.js/((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))/",
+    "below": "0.125.0",
+    "issue": "high severity issue: Versions of three.js before 0.125.0 are vulnerable to Regular Expression Denial of Service (ReDoS) when handling rgb..."
+  },
+  {
+    "name": "TinyMCE",
+    "regex": "/\\*\\*[\\s]*\\* TinyMCE version ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "8.5.1",
+    "issue": "high severity issue: TinyMCE Cross-Site Scripting (XSS) vulnerability using through data-mce- prefixed src, href, style attributes"
+  },
+  {
+    "name": "Ua-parser-js",
+    "regex": "/\\* UAParser.js v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "2.0.10",
+    "issue": "medium severity issue: UAParser.js: Unbounded `Sec-CH-UA-Model` parsing can trigger ReDoS in `withClientHints()`"
+  },
+  {
+    "name": "Underscore.js",
+    "regex": "//[\\s]*Underscore.js ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "1.13.8",
+    "issue": "high severity issue: Underscore.js versions up to 1.13.7 are vulnerable to Denial of Service via stack overflow. The _.flatten and _.isEq..."
+  },
+  {
+    "name": "Video.js",
+    "regex": "\\* Video\\.js ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "7.14.3",
+    "issue": "medium severity issue: Versions of video.js before 7.14.3 are vulnerable to Cross-Site Scripting (XSS). The src attribute of track tags d..."
+  },
+  {
+    "name": "Vue",
+    "regex": "/\\*!\\n \\* Vue.js v((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "2.6.11",
+    "issue": "medium severity issue: Bump vue-server-renderer's dependency of serialize-javascript to 2.1.2"
+  },
+  {
+    "name": "YUI",
+    "regex": "/*\nYUI ((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))",
+    "below": "3.10.13",
+    "issue": "medium severity issue: CVE-2013-4940"
+  },
+  {
+    "name": "Zrender",
+    "regex": "ssrDataGetter = getter;[\\s]+\\}[\\s]+var version = '((?P\u003cver\u003e[0-9]+(?:\\.[0-9]+)+))';[\\s]+",
+    "below": "5.2.1",
+    "issue": "medium severity issue: The merge and clone helper methods in zrender's src/core/util.ts module are vulnerable to Prototype Pollution. Mal..."
+  }
+]

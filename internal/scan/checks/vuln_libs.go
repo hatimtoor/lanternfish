@@ -1,6 +1,8 @@
 package checks
 
 import (
+	"embed"
+	"encoding/json"
 	"regexp"
 	"strconv"
 	"strings"
@@ -8,6 +10,76 @@ import (
 	"lanternfish/internal/httpmsg"
 	"lanternfish/internal/scan"
 )
+
+// sigData holds signature databases refreshed from public sources by
+// `scripts/update-signatures.sh` (see tools/sigsync). They supplement the
+// curated libSigs below, so coverage stays current without hand-editing.
+//
+//go:embed data/*.json
+var sigData embed.FS
+
+// libData is the on-disk schema for a generated library signature.
+type libData struct {
+	Name  string `json:"name"`
+	Regex string `json:"regex"` // must have exactly one capture group: the version
+	Below string `json:"below"` // vulnerable when the detected version is below this
+	Issue string `json:"issue"`
+}
+
+func init() {
+	entries, err := sigData.ReadDir("data")
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		b, err := sigData.ReadFile("data/" + e.Name())
+		if err != nil {
+			continue
+		}
+		var items []libData
+		if json.Unmarshal(b, &items) != nil {
+			continue
+		}
+		for _, it := range items {
+			re, err := regexp.Compile(it.Regex)
+			if err != nil {
+				continue
+			}
+			idx := -1
+			for i, n := range re.SubexpNames() {
+				if n == "ver" {
+					idx = i
+					break
+				}
+			}
+			parts := parseVerParts(it.Below)
+			if idx < 1 || parts == nil {
+				continue
+			}
+			genSigs = append(genSigs, genSig{name: it.Name, re: re, verIdx: idx, fixedI: parts, fixed: it.Below, issue: it.Issue})
+		}
+	}
+}
+
+// parseVerParts turns "1.6.3" into []int{1,6,3}; returns nil on garbage.
+func parseVerParts(v string) []int {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	var out []int
+	for _, p := range strings.Split(v, ".") {
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return nil
+		}
+		out = append(out, n)
+	}
+	return out
+}
 
 // VulnerableJSLibrary passively detects common front-end libraries and flags
 // versions below a known-safe cutoff, in the spirit of retire.js. The signature
@@ -24,6 +96,20 @@ type libSig struct {
 	fixed  string
 	issue  string
 }
+
+// genSig is a signature loaded from a refreshed data file (see sigData). Unlike
+// the curated libSigs, the version is a named capture group, so the source
+// regex may contain other groups.
+type genSig struct {
+	name   string
+	re     *regexp.Regexp
+	verIdx int
+	fixedI []int
+	fixed  string
+	issue  string
+}
+
+var genSigs []genSig
 
 var libSigs = []libSig{
 	{"jQuery", regexp.MustCompile(`(?i)jquery[ \-/]?v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)`), []int{3, 5, 0}, "3.5.0", "cross-site scripting (CVE-2020-11022/11023)"},
@@ -61,20 +147,41 @@ func (VulnerableJSLibrary) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 		if !versionLess(ver, sig.fixedI) {
 			continue
 		}
-		key := sig.name + ver
-		if seen[key] {
+		if is := libIssue(tx, sig.name, ver, sig.fixed, sig.issue, m[0], seen); is != nil {
+			issues = append(issues, is)
+		}
+	}
+	// Generated (refreshed) signatures: version is the named "ver" group.
+	for _, sig := range genSigs {
+		m := sig.re.FindStringSubmatch(body)
+		if m == nil || sig.verIdx >= len(m) {
 			continue
 		}
-		seen[key] = true
-		issues = append(issues, &scan.Issue{
-			Check: "vulnerable-js-library", Name: "Outdated JavaScript library: " + sig.name + " " + ver,
-			URL: tx.Request.AbsoluteURL().String(), Severity: scan.SeverityMedium, Confidence: scan.ConfidenceTentative,
-			Detail:      sig.name + " " + ver + " is below " + sig.fixed + ", which fixed " + sig.issue + ".",
-			Remediation: "Upgrade " + sig.name + " to " + sig.fixed + " or later.",
-			Evidence:    strings.TrimSpace(m[0]), CWE: "CWE-1104",
-		})
+		ver := m[sig.verIdx]
+		if !versionLess(ver, sig.fixedI) {
+			continue
+		}
+		if is := libIssue(tx, sig.name, ver, sig.fixed, sig.issue, m[0], seen); is != nil {
+			issues = append(issues, is)
+		}
 	}
 	return issues
+}
+
+// libIssue builds a vulnerable-library issue, de-duplicating on name+version.
+func libIssue(tx *httpmsg.Transaction, name, ver, fixed, issue, evidence string, seen map[string]bool) *scan.Issue {
+	key := name + ver
+	if seen[key] {
+		return nil
+	}
+	seen[key] = true
+	return &scan.Issue{
+		Check: "vulnerable-js-library", Name: "Outdated JavaScript library: " + name + " " + ver,
+		URL: tx.Request.AbsoluteURL().String(), Severity: scan.SeverityMedium, Confidence: scan.ConfidenceTentative,
+		Detail:      name + " " + ver + " is below " + fixed + ", which fixed " + issue + ".",
+		Remediation: "Upgrade " + name + " to " + fixed + " or later.",
+		Evidence:    strings.TrimSpace(evidence), CWE: "CWE-1104",
+	}
 }
 
 // versionLess reports whether the dotted version string is below fixed.
