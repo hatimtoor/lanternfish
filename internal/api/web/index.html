@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lanternfish</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkxhbnRlcm5maXNoIj4KICA8dGl0bGU+TGFudGVybmZpc2g8L3RpdGxlPgogIDxkZWZzPgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJnbG93IiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZmZlNDg5Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMzUlIiBzdG9wLWNvbG9yPSIjZmZkMjRhIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2ZmZDI0YSIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJib2R5IiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMyYWE2YzkiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTQ1YTczIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8IS0tIGRlZXAtd2F0ZXIgYmFja2Ryb3AgLS0+CiAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwYjFiMmIiLz4KICA8IS0tIHRoZSBsYW50ZXJuJ3MgZ2xvdyAtLT4KICA8Y2lyY2xlIGN4PSI0NiIgY3k9IjE3IiByPSIxNSIgZmlsbD0idXJsKCNnbG93KSIvPgogIDwhLS0gbHVyZSBzdGFsayBmcm9tIHRoZSBoZWFkIHRvIHRoZSBsaWdodCAtLT4KICA8cGF0aCBkPSJNMzAgMjYgQyAzNiAxOCwgNDIgMTYsIDQ1IDE3IiBmaWxsPSJub25lIiBzdHJva2U9IiM5ZmIzYzAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPCEtLSB0YWlsIGZpbiAtLT4KICA8cGF0aCBkPSJNOCAzNCBMIDIgMjYgTCA0IDM0IEwgMiA0MiBaIiBmaWxsPSIjMTQ1YTczIi8+CiAgPCEtLSBib2R5IC0tPgogIDxlbGxpcHNlIGN4PSIyNiIgY3k9IjM3IiByeD0iMjAiIHJ5PSIxMiIgZmlsbD0idXJsKCNib2R5KSIvPgogIDwhLS0gbGFudGVybiBvcmIgLS0+CiAgPGNpcmNsZSBjeD0iNDYiIGN5PSIxNyIgcj0iNC41IiBmaWxsPSIjZmZmM2M0Ii8+CiAgPGNpcmNsZSBjeD0iNDYiIGN5PSIxNyIgcj0iNC41IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmQyNGEiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPCEtLSBleWUgLS0+CiAgPGNpcmNsZSBjeD0iMzMiIGN5PSIzMyIgcj0iMy40IiBmaWxsPSIjZjVmYmZmIi8+CiAgPGNpcmNsZSBjeD0iMzQiIGN5PSIzMyIgcj0iMS43IiBmaWxsPSIjMGIxYjJiIi8+CiAgPCEtLSB0b290aHkgZ3JpbiwgYSBub2QgdG8gdGhlIGRlZXAtc2VhIGh1bnRlciAtLT4KICA8cGF0aCBkPSJNMzYgNDEgTCA0MCA0MSBMIDM3LjUgNDQgWiIgZmlsbD0iI2VhZjRmOCIvPgogIDxwYXRoIGQ9Ik00MCA0MSBMIDQ0IDQwIEwgNDIgNDMuNSBaIiBmaWxsPSIjZWFmNGY4Ii8+Cjwvc3ZnPgo=" />
+<style>
+  :root {
+    --bg:#15181d; --panel:#1c2026; --panel2:#232833; --line:#2e3440;
+    --fg:#d7dce3; --mut:#8a94a6; --accent:#e8743b; --accent2:#4c8bf5;
+    --hi:#2a2f3a;
+    --crit:#e0414e; --high:#e8743b; --med:#e0b341; --low:#4c8bf5; --info:#8a94a6;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg:#f5f6f8; --panel:#fff; --panel2:#eef1f5; --line:#dde1e7;
+      --fg:#1c2430; --mut:#5b6677; --hi:#e8edf5;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13px/1.5 ui-monospace,"Cascadia Code",Consolas,monospace; background:var(--bg); color:var(--fg); }
+  header { display:flex; align-items:center; gap:14px; padding:8px 14px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header .logo { font-weight:700; color:var(--accent); letter-spacing:.5px; }
+  header .stats { margin-left:auto; color:var(--mut); font-size:12px; display:flex; gap:16px; }
+  header .stats b { color:var(--fg); }
+  nav { display:flex; background:var(--panel); border-bottom:1px solid var(--line); overflow-x:auto; }
+  nav button { background:none; border:none; color:var(--mut); padding:9px 16px; cursor:pointer; font:inherit; border-bottom:2px solid transparent; white-space:nowrap; }
+  nav button.active { color:var(--fg); border-bottom-color:var(--accent); }
+  nav button:hover { color:var(--fg); }
+  main { padding:12px 14px; }
+  .tab { display:none; }
+  .tab.active { display:block; }
+  table { width:100%; border-collapse:collapse; }
+  th,td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px; }
+  th { color:var(--mut); font-weight:600; position:sticky; top:0; background:var(--panel); }
+  tbody tr { cursor:pointer; }
+  tbody tr:hover { background:var(--hi); }
+  tbody tr.sel { background:var(--panel2); }
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .box { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:0; overflow:hidden; }
+  .box h3 { margin:0; padding:7px 10px; font-size:12px; color:var(--mut); background:var(--panel2); border-bottom:1px solid var(--line); }
+  pre, textarea { margin:0; padding:10px; font:inherit; color:var(--fg); background:transparent; white-space:pre-wrap; word-break:break-word; max-height:440px; overflow:auto; width:100%; border:none; resize:vertical; }
+  textarea { min-height:220px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  input[type=text], select { background:var(--panel2); color:var(--fg); border:1px solid var(--line); border-radius:4px; padding:6px 8px; font:inherit; }
+  input[type=text] { flex:1; min-width:220px; }
+  button.act { background:var(--accent); color:#fff; border:none; border-radius:4px; padding:7px 14px; cursor:pointer; font:inherit; }
+  button.act.alt { background:var(--accent2); }
+  button.act.ghost { background:var(--panel2); color:var(--fg); border:1px solid var(--line); }
+  button.act:disabled { opacity:.5; cursor:default; }
+  .pill { display:inline-block; padding:1px 7px; border-radius:10px; font-size:11px; color:#fff; }
+  .s-crit{background:var(--crit)} .s-high{background:var(--high)} .s-med{background:var(--med);color:#1c2430} .s-low{background:var(--low)} .s-info{background:var(--info)}
+  .muted { color:var(--mut); }
+  .status-2{color:#54b86b}.status-3{color:var(--med)}.status-4{color:var(--high)}.status-5{color:var(--crit)}
+  .empty { color:var(--mut); padding:24px; text-align:center; }
+  .issue { border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin-bottom:8px; background:var(--panel); }
+  .issue .t { display:flex; gap:8px; align-items:center; }
+  .issue .t b { font-size:13px; }
+  .issue .d { color:var(--mut); margin-top:4px; }
+  .issue code { background:var(--panel2); padding:1px 4px; border-radius:3px; }
+  .flash { position:fixed; bottom:14px; right:14px; background:var(--panel2); border:1px solid var(--line); padding:8px 14px; border-radius:6px; opacity:0; transition:opacity .2s; }
+  .flash.show { opacity:1; }
+  label.inl { color:var(--mut); }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">◆ LANTERNFISH</span>
+  <span class="muted" title="Use Lanternfish only against systems you own or are explicitly authorized to test.">web security testing · authorized testing only</span>
+  <span class="stats" id="stats"></span>
+  <span style="display:flex;gap:6px;align-items:center;margin-left:16px">
+    <input type="text" id="proj-path" placeholder="project.json" style="min-width:140px;flex:none;width:160px" />
+    <button class="act ghost" onclick="saveProject()">Save</button>
+    <button class="act ghost" onclick="loadProject()">Load</button>
+    <a class="act ghost" href="/api/report?format=html" target="_blank" style="text-decoration:none">Report</a>
+  </span>
+</header>
+<nav id="nav"></nav>
+<main>
+  <section class="tab" data-tab="autopilot">
+    <div class="row">
+      <input type="text" id="ap-url" placeholder="https://target.example/  — point here, Lanternfish does the rest" />
+      <label class="inl"><input type="checkbox" id="ap-browser" /> browser</label>
+      <label class="inl"><input type="checkbox" id="ap-fast" /> fast</label>
+      <label class="inl">max</label><input type="text" id="ap-max" value="100" style="flex:none;width:64px" />
+      <label class="inl">depth</label><input type="text" id="ap-depth" value="3" style="flex:none;width:52px" />
+      <button class="act" onclick="runAuto()">Run ▶</button>
+      <span class="muted" id="ap-status"></span>
+    </div>
+    <div class="row"><span class="muted">⚠ Authorized testing only — scan systems you own or have explicit permission to test.</span></div>
+    <details class="box" style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">New here? How an assessment works</summary>
+      <div class="d" style="padding:6px 10px">A security assessment follows five steps:
+      <b>1) Scope</b> — decide exactly what you may test (autopilot limits itself to the target's host).
+      <b>2) Map</b> — crawl to find pages, forms, and parameters.
+      <b>3) Test</b> — probe every input with passive and active checks.
+      <b>4) Review</b> — read findings worst-first; expand "Learn about this" on each.
+      <b>5) Report</b> — use the Report button in the header to export an HTML write-up.
+      No target yet? Run <code>lanternfish lab</code> for a legal practice range, then point this at it.</div>
+    </details>
+    <div class="row">
+      <button class="act ghost" id="la-toggle" onclick="toggleLiveAudit()">Live auto-audit is off</button>
+      <span class="muted">When on, in-scope requests you browse through the proxy are scanned automatically. Set a Scope first.</span>
+    </div>
+    <div class="box" style="margin-top:8px"><h3>Pipeline</h3><pre id="ap-phases" class="empty">crawl, audit, out-of-band and (optionally) a headless browser run — all from one click.</pre></div>
+    <div id="ap-issues"></div>
+  </section>
+
+  <section class="tab" data-tab="proxy">
+    <div class="row">
+      <button class="act ghost" onclick="loadHistory()">↻ Refresh</button>
+      <span class="muted" id="proxy-count"></span>
+    </div>
+    <div class="split">
+      <div class="box" style="max-height:520px;overflow:auto">
+        <h3>HTTP history</h3>
+        <table><thead><tr><th>#</th><th>src</th><th>method</th><th>url</th><th>status</th><th>len</th></tr></thead>
+        <tbody id="hist"></tbody></table>
+      </div>
+      <div class="box">
+        <h3>Detail</h3>
+        <div class="row" style="margin:6px 10px">
+          <button class="act ghost" id="send-rp" onclick="sendTo('repeater')" disabled>→ Repeater</button>
+          <button class="act ghost" id="send-fz" onclick="sendTo('intruder')" disabled>→ Intruder</button>
+        </div>
+        <div class="split" style="grid-template-columns:1fr;gap:0">
+          <div><div class="box" style="border:none"><h3>Request</h3><pre id="d-req" class="empty">select a row</pre></div></div>
+          <div><div class="box" style="border:none;border-top:1px solid var(--line)"><h3>Response</h3><pre id="d-res"></pre></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab" data-tab="intercept">
+    <div class="row">
+      <button class="act" id="ic-toggle" onclick="toggleIntercept()">Intercept is off</button>
+      <button class="act ghost" onclick="loadIntercept()">↻ Refresh</button>
+      <span class="muted">When on, in-scope requests are held here until you forward or drop them.</span>
+    </div>
+    <div id="ic-list"></div>
+  </section>
+
+  <section class="tab" data-tab="repeater">
+    <div class="row">
+      <select id="rp-method"><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option><option>HEAD</option><option>OPTIONS</option></select>
+      <input type="text" id="rp-url" placeholder="https://target.example/path" />
+      <button class="act" onclick="sendRepeater()">Send ▶</button>
+    </div>
+    <div class="split">
+      <div class="box"><h3>Request (headers one per line: Name: value — blank line then body)</h3>
+        <textarea id="rp-req" placeholder="User-Agent: lanternfish&#10;Content-Type: application/x-www-form-urlencoded&#10;&#10;a=1&b=2"></textarea>
+      </div>
+      <div class="box"><h3>Response</h3><pre id="rp-res" class="empty">no response yet</pre></div>
+    </div>
+  </section>
+
+  <section class="tab" data-tab="target">
+    <div class="row">
+      <input type="text" id="cr-seed" placeholder="https://target.example/ (seed URL to crawl)" />
+      <label class="inl">max pages</label><input type="text" id="cr-max" value="60" style="flex:none;width:70px" />
+      <label class="inl"><input type="checkbox" id="cr-audit" /> audit</label>
+      <button class="act" onclick="startCrawl()">Crawl ▶</button>
+      <button class="act ghost" onclick="loadSitemap()">↻ Refresh</button>
+      <span class="muted" id="cr-status"></span>
+    </div>
+    <div id="sitemap"></div>
+  </section>
+
+  <section class="tab" data-tab="intruder">
+    <div class="row">
+      <select id="fz-method"><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select>
+      <input type="text" id="fz-url" placeholder="https://target.example/item?id=FUZZ" />
+      <label class="inl">marker</label><input type="text" id="fz-marker" value="FUZZ" style="flex:none;width:80px" />
+      <button class="act" onclick="runFuzz()">Attack ▶</button>
+      <span class="muted" id="fz-status"></span>
+    </div>
+    <div class="split">
+      <div class="box"><h3>Payloads (one per line)</h3><textarea id="fz-payloads" placeholder="1&#10;2&#10;' OR '1'='1&#10;../../etc/passwd&#10;&lt;script&gt;alert(1)&lt;/script&gt;"></textarea></div>
+      <div class="box" style="max-height:480px;overflow:auto"><h3>Results</h3>
+        <table><thead><tr><th>payload</th><th>status</th><th>len</th><th>ms</th></tr></thead><tbody id="fz-rows"></tbody></table>
+      </div>
+    </div>
+    <div class="box" style="margin-top:8px"><h3>Optional body (marker allowed)</h3><textarea id="fz-body" style="min-height:80px" placeholder="for POST: a=FUZZ&b=2"></textarea></div>
+  </section>
+
+  <section class="tab" data-tab="scanner">
+    <div class="row">
+      <input type="text" id="sc-url" placeholder="https://target.example/page?param=value" />
+      <button class="act" onclick="runScan()">Scan ▶</button>
+      <button class="act ghost" onclick="loadIssues()">↻ Issues</button>
+      <button class="act ghost" onclick="loadInteractions()">↻ OOB</button>
+      <span class="muted" id="sc-status"></span>
+    </div>
+    <div id="issues"></div>
+    <div class="box" style="margin-top:10px"><h3 id="oob-head">Out-of-band interactions</h3><pre id="oob" class="empty">none yet</pre></div>
+  </section>
+
+  <section class="tab" data-tab="decoder">
+    <div class="row">
+      <select id="dc-op">
+        <option>smart-decode</option><option>base64-encode</option><option>base64-decode</option>
+        <option>url-encode</option><option>url-decode</option><option>hex-encode</option><option>hex-decode</option>
+        <option>html-encode</option><option>html-decode</option><option>ascii-hex-encode</option><option>ascii-hex-decode</option>
+        <option>md5</option><option>sha1</option><option>sha256</option>
+      </select>
+      <button class="act" onclick="runDecode()">Apply ▶</button>
+    </div>
+    <div class="split">
+      <div class="box"><h3>Input</h3><textarea id="dc-in" placeholder="text to transform"></textarea></div>
+      <div class="box"><h3>Output</h3><pre id="dc-out" class="empty">result appears here</pre></div>
+    </div>
+  </section>
+
+  <section class="tab" data-tab="comparer">
+    <div class="row"><select id="cmp-mode"><option value="line">line</option><option value="word">word</option></select><button class="act" onclick="runCompare()">Compare ▶</button></div>
+    <div class="split">
+      <div class="box"><h3>A</h3><textarea id="cmp-a"></textarea></div>
+      <div class="box"><h3>B</h3><textarea id="cmp-b"></textarea></div>
+    </div>
+    <div class="box" style="margin-top:8px"><h3>Diff</h3><pre id="cmp-out" class="empty">no comparison yet</pre></div>
+  </section>
+
+  <section class="tab" data-tab="sequencer">
+    <div class="row"><button class="act" onclick="runSequence()">Analyze ▶</button><span class="muted">Paste captured tokens, one per line (session IDs, CSRF tokens).</span></div>
+    <div class="split">
+      <div class="box"><h3>Tokens</h3><textarea id="seq-in" placeholder="token1&#10;token2&#10;token3"></textarea></div>
+      <div class="box"><h3>Analysis</h3><pre id="seq-out" class="empty">no analysis yet</pre></div>
+    </div>
+  </section>
+
+  <section class="tab" data-tab="websockets">
+    <div class="row"><button class="act ghost" onclick="loadWS()">↻ Refresh</button><span class="muted">WebSocket messages observed through the proxy (ws:// and wss://).</span></div>
+    <div class="box" style="max-height:560px;overflow:auto"><h3>Messages</h3>
+      <table><thead><tr><th>#</th><th>dir</th><th>type</th><th>len</th><th>url</th><th>text</th></tr></thead><tbody id="ws-rows"></tbody></table>
+    </div>
+  </section>
+
+  <section class="tab" data-tab="rules">
+    <div class="row">
+      <select id="rw-target"><option value="header">header</option><option value="url">url</option><option value="body">body</option></select>
+      <input type="text" id="rw-pattern" placeholder="regex to match (e.g. ^User-Agent value)" />
+      <input type="text" id="rw-replace" placeholder="replacement" />
+      <button class="act" onclick="addRewrite()">Add rule</button>
+      <span class="muted">Rules rewrite proxied requests before they are sent.</span>
+    </div>
+    <div class="box"><h3>Rules</h3><table><thead><tr><th>#</th><th>on</th><th>target</th><th>pattern</th><th>replacement</th><th></th></tr></thead><tbody id="rw-rows"></tbody></table></div>
+  </section>
+
+  <section class="tab" data-tab="extensions">
+    <div class="row">
+      <input type="text" id="ext-name" placeholder="name" style="flex:none;width:140px" />
+      <input type="text" id="ext-url" placeholder="https://your-extension/webhook" />
+      <button class="act" onclick="addExt()">Register</button>
+      <span class="muted">Each transaction is POSTed as JSON; return {"issues":[…]} to add findings.</span>
+    </div>
+    <div class="box"><h3>Extensions</h3><table><thead><tr><th>#</th><th>name</th><th>url</th><th>on</th><th></th></tr></thead><tbody id="ext-rows"></tbody></table></div>
+  </section>
+
+  <section class="tab" data-tab="scope">
+    <div class="row">
+      <input type="text" id="scope-host" placeholder="host or *.example.com" />
+      <input type="text" id="scope-path" placeholder="/optional/path/prefix" />
+      <button class="act" onclick="addScope('include')">Include</button>
+      <button class="act ghost" onclick="addScope('exclude')">Exclude</button>
+      <button class="act ghost" onclick="clearScope()">Clear</button>
+    </div>
+    <div class="split">
+      <div class="box"><h3>In scope</h3><pre id="scope-inc" class="empty">everything (no include rules)</pre></div>
+      <div class="box"><h3>Excluded</h3><pre id="scope-exc" class="empty">none</pre></div>
+    </div>
+    <h3 style="color:var(--mut);margin:16px 0 6px">Authenticated testing</h3>
+    <div class="row">
+      <input type="text" id="auth-name" placeholder="header name (e.g. Cookie, Authorization)" style="flex:none;width:260px" />
+      <input type="text" id="auth-value" placeholder="value (sent with scanner/crawler/repeater)" />
+      <button class="act" onclick="setAuth()">Set</button>
+      <span class="muted">Injected into tool requests, not proxied browser traffic.</span>
+    </div>
+    <div class="box"><h3>Session headers</h3><pre id="auth-list" class="empty">none</pre></div>
+    <h3 style="color:var(--mut);margin:16px 0 6px">Scope tester</h3>
+    <div class="row">
+      <input type="text" id="st-url" placeholder="https://host/path to test against scope" />
+      <button class="act ghost" onclick="testScope()">Test</button>
+      <span class="muted" id="st-result"></span>
+    </div>
+  </section>
+</main>
+<div class="flash" id="flash"></div>
+
+<script>
+const TABS = [["autopilot","Autopilot"],["proxy","Proxy"],["intercept","Intercept"],["repeater","Repeater"],["target","Target"],["scanner","Scanner"],["intruder","Intruder"],["decoder","Decoder"],["comparer","Comparer"],["sequencer","Sequencer"],["websockets","WebSockets"],["rules","Match/Replace"],["extensions","Extensions"],["scope","Scope"]];
+let active = "autopilot";
+const $ = s => document.querySelector(s);
+const esc = s => (s||"").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+function buildNav() {
+  const nav = $("#nav");
+  nav.innerHTML = "";
+  for (const [id,label] of TABS) {
+    const b = document.createElement("button");
+    b.textContent = label; b.className = id===active?"active":"";
+    b.onclick = () => select(id);
+    nav.appendChild(b);
+  }
+}
+function select(id) {
+  active = id; buildNav();
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab===id));
+  refreshTab();
+}
+function refreshTab() {
+  if (active==="autopilot") loadLiveAudit();
+  if (active==="proxy") loadHistory();
+  if (active==="intercept") loadIntercept();
+  if (active==="target") loadSitemap();
+  if (active==="scanner") { loadIssues(); loadInteractions(); }
+  if (active==="scope") { loadScope(); loadAuth(); }
+  if (active==="rules") loadRewrite();
+  if (active==="websockets") loadWS();
+  if (active==="extensions") loadExt();
+  // decoder/comparer/sequencer are input-driven; nothing to preload.
+}
+function flash(msg) { const f=$("#flash"); f.textContent=msg; f.classList.add("show"); setTimeout(()=>f.classList.remove("show"),1800); }
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) { flash("error: "+r.status+" "+(await r.text())); throw new Error(r.status); }
+  const ct = r.headers.get("content-type")||"";
+  return ct.includes("json") ? r.json() : r.text();
+}
+function statusClass(s){ return s>=500?"status-5":s>=400?"status-4":s>=300?"status-3":s>=200?"status-2":""; }
+
+async function loadStats(){ try{ const s=await api("/api/stats"); $("#stats").innerHTML=`history <b>${s.history}</b> · issues <b>${s.issues}</b> · held <b>${s.pending}</b> · ws <b>${s.websockets||0}</b>`; }catch(e){} }
+setInterval(loadStats, 2500);
+
+async function loadHistory(){
+  const rows = await api("/api/history?limit=500");
+  $("#proxy-count").textContent = rows.length+" requests";
+  const tb=$("#hist"); tb.innerHTML="";
+  if(!rows.length){ tb.innerHTML=`<tr><td colspan=6 class=empty>no traffic yet — set your client's proxy to this server</td></tr>`; return; }
+  for(const r of rows){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.id}</td><td class=muted>${r.source}</td><td>${r.method}</td><td title="${esc(r.url)}">${esc(r.url)}</td><td class="${statusClass(r.status)}">${r.status||"-"}</td><td>${r.length}</td>`;
+    tr.onclick=()=>showDetail(r.id, tr);
+    tb.appendChild(tr);
+  }
+}
+let currentDetail=null;
+async function showDetail(id, tr){
+  document.querySelectorAll("#hist tr").forEach(x=>x.classList.remove("sel"));
+  if(tr) tr.classList.add("sel");
+  const d=await api("/api/history/"+id);
+  currentDetail=d;
+  $("#send-rp").disabled=false; $("#send-fz").disabled=false;
+  $("#d-req").classList.remove("empty");
+  $("#d-req").textContent=d.request_raw;
+  let hdr=""; for(const k in (d.response_headers||{})) hdr+=k+": "+d.response_headers[k].join(", ")+"\n";
+  $("#d-res").textContent=`HTTP ${d.status}\n${hdr}\n${d.response_body||""}`;
+}
+// Split request_raw ("METHOD path HTTP/1.1\nHeader: v\n...\n\nbody") into
+// header-block (one per line, minus the request line) and body.
+function splitRaw(raw){
+  const parts=raw.split(/\n\n/); const head=parts[0]||""; const body=parts.slice(1).join("\n\n");
+  const lines=head.split("\n").slice(1); // drop the request line
+  return {headers:lines.join("\n"), body};
+}
+function sendTo(dest){
+  if(!currentDetail) return;
+  const {headers,body}=splitRaw(currentDetail.request_raw);
+  if(dest==="repeater"){
+    $("#rp-method").value=currentDetail.method||"GET";
+    $("#rp-url").value=currentDetail.url;
+    $("#rp-req").value=headers+(body?"\n\n"+body:"\n\n");
+    select("repeater");
+  }else{
+    $("#fz-method").value=currentDetail.method||"GET";
+    $("#fz-url").value=currentDetail.url;
+    $("#fz-body").value=body;
+    select("intruder");
+    flash("loaded into Intruder — add FUZZ markers and payloads");
+  }
+}
+
+async function loadIntercept(){
+  const d=await api("/api/intercept");
+  const btn=$("#ic-toggle");
+  btn.textContent = d.enabled ? "Intercept is ON" : "Intercept is off";
+  btn.className = "act" + (d.enabled?"":" ghost");
+  const box=$("#ic-list");
+  if(!d.pending.length){ box.innerHTML=`<div class=empty>${d.enabled?"waiting for in-scope requests…":"interception is off"}</div>`; return; }
+  box.innerHTML="";
+  for(const p of d.pending){
+    const div=document.createElement("div"); div.className="box"; div.style.marginBottom="10px";
+    div.innerHTML=`<h3>#${p.id} — ${p.method} ${esc(p.url)}</h3>
+      <textarea id="ic-${p.id}">${esc(p.request_raw)}</textarea>
+      <div class="row" style="margin:8px 10px"><button class="act" onclick="forward(${p.id})">Forward ▶</button>
+      <button class="act ghost" onclick="drop(${p.id})">Drop ✕</button></div>`;
+    box.appendChild(div);
+  }
+}
+async function toggleIntercept(){
+  const cur=$("#ic-toggle").textContent.includes("ON");
+  await api("/api/intercept/toggle",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({enabled:!cur})});
+  loadIntercept();
+}
+async function forward(id){
+  const raw=$("#ic-"+id).value;
+  await api("/api/intercept/"+id+"/forward",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({raw})});
+  flash("forwarded #"+id); loadIntercept();
+}
+async function drop(id){ await api("/api/intercept/"+id+"/drop",{method:"POST"}); flash("dropped #"+id); loadIntercept(); }
+
+async function sendRepeater(){
+  const url=$("#rp-url").value.trim(); if(!url){flash("enter a URL");return;}
+  const method=$("#rp-method").value;
+  const raw=$("#rp-req").value; const [head,...rest]=raw.split(/\n\n/); const body=rest.join("\n\n");
+  const headers={}; for(const line of head.split("\n")){ const i=line.indexOf(":"); if(i>0) headers[line.slice(0,i).trim()]=line.slice(i+1).trim(); }
+  $("#rp-res").classList.remove("empty"); $("#rp-res").textContent="sending…";
+  try{
+    const d=await api("/api/replay",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({method,url,headers,body})});
+    let hdr=""; for(const k in (d.response_headers||{})) hdr+=k+": "+d.response_headers[k].join(", ")+"\n";
+    $("#rp-res").textContent=`HTTP ${d.status}  (${d.length} bytes)\n${hdr}\n${d.response_body||""}`;
+    loadStats();
+  }catch(e){ $("#rp-res").textContent="request failed"; }
+}
+
+async function loadSitemap(){
+  const m=await api("/api/sitemap"); const box=$("#sitemap");
+  const hosts=Object.keys(m).sort();
+  if(!hosts.length){ box.innerHTML=`<div class=empty>no hosts yet</div>`; return; }
+  box.innerHTML="";
+  for(const h of hosts){
+    const node=m[h]; const paths=Object.keys(node.paths).sort();
+    const div=document.createElement("div"); div.className="box"; div.style.marginBottom="8px";
+    let rows=paths.map(p=>`<tr><td>${esc(p)}</td><td class="${statusClass(node.paths[p])}">${node.paths[p]||"-"}</td></tr>`).join("");
+    div.innerHTML=`<h3>${esc(h)} — ${paths.length} path(s)</h3><table><tbody>${rows}</tbody></table>`;
+    box.appendChild(div);
+  }
+}
+
+async function runScan(){
+  const url=$("#sc-url").value.trim(); if(!url){flash("enter a URL");return;}
+  $("#sc-status").textContent="scanning…";
+  try{
+    const res=await api("/api/scan",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url})});
+    $("#sc-status").textContent=`found ${res.issues.length} issue(s) in ${res.duration}`;
+    loadIssues(); loadStats();
+  }catch(e){ $("#sc-status").textContent="scan failed"; }
+}
+function issueCard(i){
+  const div=document.createElement("div"); div.className="issue";
+  const learn = i.check?`<div class="d"><a href="#" class="learn-link">▸ Learn about this</a><div class="learn-body" style="display:none"></div></div>`:"";
+  div.innerHTML=`<div class="t"><span class="pill s-${i.severity}">${i.severity}</span><b>${esc(i.name)}</b><span class="muted">${i.confidence}${i.cwe?" · "+i.cwe:""}</span></div>
+    <div class="d"><code>${esc(i.url)}</code>${i.param?" param <code>"+esc(i.param)+"</code>":""}</div>
+    <div class="d">${esc(i.detail)}</div>${i.evidence?`<div class="d">evidence: <code>${esc(i.evidence)}</code></div>`:""}${learn}`;
+  if(i.check){
+    const link=div.querySelector(".learn-link"), body=div.querySelector(".learn-body");
+    link.onclick=async(e)=>{ e.preventDefault();
+      if(body.style.display==="none"){
+        if(!body.dataset.loaded){
+          try{ const k=await api("/api/explain?check="+encodeURIComponent(i.check)); body.innerHTML=explainHtml(k); }
+          catch(err){ body.innerHTML="<span class=muted>no explanation available</span>"; }
+          body.dataset.loaded="1";
+        }
+        body.style.display=""; link.textContent="▾ Learn about this";
+      } else { body.style.display="none"; link.textContent="▸ Learn about this"; }
+    };
+  }
+  return div;
+}
+function explainHtml(k){
+  const row=(label,v)=>v?`<div class="d"><b>${label}</b> ${esc(v)}</div>`:"";
+  const refs=(k.refs||[]).map(r=>`<div class="d">↗ <a href="${esc(r)}" target="_blank" rel="noopener">${esc(r)}</a></div>`).join("");
+  return `<div class="learn" style="margin-top:6px;border-left:2px solid var(--accent);padding-left:10px">
+    <div class="d"><b>${esc(k.title||"")}</b></div>
+    ${row("What it is:",k.what)}${row("Why it matters:",k.why)}${row("Confirm:",k.confirm)}
+    ${row("Exploit (in a lab you own):",k.exploit)}${row("Fix:",k.fix)}
+    ${refs?`<div class="d"><b>Learn more (free):</b></div>${refs}`:""}</div>`;
+}
+function renderIssues(box, issues, emptyMsg){
+  if(!issues.length){ box.innerHTML=`<div class=empty>${emptyMsg}</div>`; return; }
+  box.innerHTML="";
+  for(const i of issues) box.appendChild(issueCard(i));
+}
+async function loadIssues(){
+  const issues=await api("/api/issues");
+  renderIssues($("#issues"), issues, "no issues yet — run a scan or browse through the proxy");
+}
+
+async function runAuto(){
+  const target=$("#ap-url").value.trim(); if(!target){flash("enter a URL");return;}
+  const body={target, fast:$("#ap-fast").checked, browser:$("#ap-browser").checked,
+    max_pages:parseInt($("#ap-max").value||"100",10), max_depth:parseInt($("#ap-depth").value||"3",10)};
+  $("#ap-status").textContent="running… (crawl + audit can take a while)";
+  $("#ap-phases").classList.remove("empty"); $("#ap-phases").textContent="working…";
+  try{
+    const res=await api("/api/auto",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+    const c=res.counts||{};
+    const sev=["critical","high","medium","low","info"].filter(s=>c[s]).map(s=>c[s]+" "+s).join(", ")||"no issues";
+    $("#ap-status").textContent=`done in ${res.duration} — crawled ${res.pages_crawled}, audited ${res.requests_audited} — ${sev}`;
+    $("#ap-phases").textContent=(res.phases||[]).map(p=>`[${p.status.padEnd(7)}] ${p.name.padEnd(14)} ${p.detail}`).join("\n");
+    renderIssues($("#ap-issues"), res.issues||[], "no issues found");
+    loadStats();
+  }catch(e){ $("#ap-status").textContent="autopilot failed"; }
+}
+async function loadLiveAudit(){
+  try{ const d=await api("/api/live-audit"); setLiveAuditBtn(d.enabled); }catch(e){}
+}
+function setLiveAuditBtn(on){
+  const b=$("#la-toggle"); b.textContent="Live auto-audit is "+(on?"on":"off"); b.classList.toggle("act",true);
+  b.style.background=on?"var(--accent)":""; b.style.color=on?"#06121f":"";
+}
+async function toggleLiveAudit(){
+  const cur=$("#la-toggle").textContent.includes("on");
+  try{ const d=await api("/api/live-audit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({enabled:!cur})}); setLiveAuditBtn(d.enabled); }
+  catch(e){ flash("could not toggle — set a Scope first"); }
+}
+
+async function loadWS(){
+  const msgs=await api("/api/websockets"); const tb=$("#ws-rows");
+  if(!msgs.length){ tb.innerHTML=`<tr><td colspan=6 class=empty>no WebSocket traffic observed</td></tr>`; return; }
+  tb.innerHTML="";
+  for(const m of msgs){
+    const dir=m.direction==="c2s"?"▲ c→s":"▼ s→c"; const type=m.opcode===1?"text":(m.opcode===2?"binary":m.opcode);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${m.id}</td><td>${dir}</td><td>${type}</td><td>${m.length}</td><td title="${esc(m.url)}">${esc(m.url)}</td><td title="${esc(m.text)}">${esc((m.text||"").slice(0,120))}</td>`;
+    tb.appendChild(tr);
+  }
+}
+async function loadInteractions(){
+  const d=await api("/api/interactions"); const el=$("#oob"); const head=$("#oob-head");
+  if(!d.enabled){ el.textContent="out-of-band listener not running"; el.classList.add("empty"); return; }
+  head.textContent="Out-of-band interactions ("+d.base+")";
+  const it=d.interactions||[];
+  if(!it.length){ el.textContent="no callbacks received yet"; el.classList.add("empty"); return; }
+  el.classList.remove("empty");
+  el.textContent=it.map(x=>`${x.time.replace('T',' ').slice(0,19)}  ${x.method} ${x.path}  from ${x.remote_addr}`).join("\n");
+}
+async function loadScope(){
+  const d=await api("/api/scope");
+  const fmt=rs=>rs&&rs.length?rs.map(r=>r.host+(r.path_prefix?" "+r.path_prefix:"")).join("\n"):null;
+  const inc=fmt(d.includes), exc=fmt(d.excludes);
+  $("#scope-inc").textContent=inc||"everything (no include rules)"; $("#scope-inc").classList.toggle("empty",!inc);
+  $("#scope-exc").textContent=exc||"none"; $("#scope-exc").classList.toggle("empty",!exc);
+}
+async function addScope(action){
+  const host=$("#scope-host").value.trim(); if(!host){flash("enter a host");return;}
+  const path_prefix=$("#scope-path").value.trim();
+  await api("/api/scope",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,host,path_prefix})});
+  $("#scope-host").value=""; $("#scope-path").value=""; loadScope();
+}
+async function clearScope(){ await api("/api/scope",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"clear"})}); loadScope(); }
+async function loadAuth(){
+  const h=await api("/api/auth"); const keys=Object.keys(h);
+  const el=$("#auth-list"); el.textContent=keys.length?keys.map(k=>k+": "+h[k]).join("\n"):"none"; el.classList.toggle("empty",!keys.length);
+}
+async function setAuth(){
+  const name=$("#auth-name").value.trim(); if(!name){flash("enter a header name");return;}
+  const value=$("#auth-value").value;
+  await api("/api/auth",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name,value})});
+  $("#auth-name").value="";$("#auth-value").value=""; loadAuth();
+}
+
+async function startCrawl(){
+  const seed=$("#cr-seed").value.trim(); if(!seed){flash("enter a seed URL");return;}
+  const max_pages=parseInt($("#cr-max").value||"60",10); const audit=$("#cr-audit").checked;
+  $("#cr-status").textContent="crawling…";
+  try{
+    const r=await api("/api/crawl",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seeds:[seed],max_pages,audit})});
+    $("#cr-status").textContent=`visited ${r.pages_visited}, found ${(r.urls_found||[]).length} URLs, ${r.forms} form(s)`+(audit?`, ${r.issues_found} issue(s)`:"");
+    loadSitemap(); loadStats();
+  }catch(e){ $("#cr-status").textContent="crawl failed"; }
+}
+
+async function runFuzz(){
+  const url=$("#fz-url").value.trim(); if(!url){flash("enter a URL");return;}
+  const payloads=$("#fz-payloads").value.split("\n").map(s=>s).filter(s=>s.length>0);
+  if(!payloads.length){flash("enter payloads");return;}
+  const marker=$("#fz-marker").value||"FUZZ"; const method=$("#fz-method").value; const body=$("#fz-body").value;
+  $("#fz-status").textContent="attacking…"; $("#fz-rows").innerHTML="";
+  try{
+    const res=await api("/api/fuzz",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({method,url,marker,body,payloads})});
+    $("#fz-status").textContent=`${res.count} requests`;
+    const tb=$("#fz-rows");
+    for(const row of res.rows){
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td title="${esc(row.payload)}">${esc(row.payload)}</td><td class="${statusClass(row.status)}">${row.error?"err":row.status}</td><td>${row.length}</td><td>${row.millis}</td>`;
+      tb.appendChild(tr);
+    }
+  }catch(e){ $("#fz-status").textContent="attack failed"; }
+}
+
+async function saveProject(){
+  const path=$("#proj-path").value.trim()||"lanternfish-project.json";
+  try{ const r=await api("/api/project/save",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({path})}); flash("saved "+r.saved); }catch(e){}
+}
+async function loadProject(){
+  const path=$("#proj-path").value.trim(); if(!path){flash("enter a project path");return;}
+  try{ await api("/api/project/load",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({path})}); flash("loaded "+path); refreshTab(); loadStats(); }catch(e){}
+}
+
+async function loadRewrite(){
+  const rules=await api("/api/rewrite"); const tb=$("#rw-rows");
+  if(!rules.length){ tb.innerHTML=`<tr><td colspan=6 class=empty>no rules</td></tr>`; return; }
+  tb.innerHTML="";
+  for(const r of rules){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.id}</td><td><input type=checkbox ${r.enabled?"checked":""} onchange="toggleRewrite(${r.id},this.checked)"></td><td>${r.target}</td><td title="${esc(r.pattern)}">${esc(r.pattern)}</td><td title="${esc(r.replacement)}">${esc(r.replacement)}</td><td><button class="act ghost" onclick="removeRewrite(${r.id})">✕</button></td>`;
+    tb.appendChild(tr);
+  }
+}
+async function addRewrite(){
+  const target=$("#rw-target").value, pattern=$("#rw-pattern").value, replacement=$("#rw-replace").value;
+  if(!pattern){flash("enter a pattern");return;}
+  try{ await api("/api/rewrite",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"add",target,pattern,replacement})}); $("#rw-pattern").value="";$("#rw-replace").value=""; loadRewrite(); }catch(e){}
+}
+async function toggleRewrite(id,enabled){ await api("/api/rewrite",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"toggle",id,enabled})}); }
+async function removeRewrite(id){ await api("/api/rewrite",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"remove",id})}); loadRewrite(); }
+
+async function loadExt(){
+  const exts=await api("/api/extensions"); const tb=$("#ext-rows");
+  if(!exts.length){ tb.innerHTML=`<tr><td colspan=5 class=empty>no extensions</td></tr>`; return; }
+  tb.innerHTML="";
+  for(const e of exts){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${e.id}</td><td>${esc(e.name)}</td><td title="${esc(e.url)}">${esc(e.url)}</td><td>${e.enabled?"✓":""}</td><td><button class="act ghost" onclick="removeExt(${e.id})">✕</button></td>`;
+    tb.appendChild(tr);
+  }
+}
+async function addExt(){
+  const url=$("#ext-url").value.trim(); if(!url){flash("enter a webhook URL");return;}
+  const name=$("#ext-name").value.trim()||"ext";
+  try{ await api("/api/extensions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"add",url,name})}); $("#ext-url").value="";$("#ext-name").value=""; loadExt(); }catch(e){}
+}
+async function removeExt(id){ await api("/api/extensions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"remove",id})}); loadExt(); }
+
+async function runDecode(){
+  const input=$("#dc-in").value, op=$("#dc-op").value;
+  const d=await api("/api/decode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({input,op})});
+  $("#dc-out").classList.remove("empty");
+  $("#dc-out").textContent=d.error?("error: "+d.error):d.output;
+}
+async function runCompare(){
+  const a=$("#cmp-a").value, b=$("#cmp-b").value, mode=$("#cmp-mode").value;
+  const d=await api("/api/compare",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({a,b,mode})});
+  const el=$("#cmp-out"); el.classList.remove("empty"); el.innerHTML="";
+  for(const s of d.segments){
+    const span=document.createElement("span");
+    span.textContent=s.text+(mode==="line"?"\n":" ");
+    if(s.op==="insert"){span.style.background="rgba(84,184,107,.25)";}
+    else if(s.op==="delete"){span.style.background="rgba(224,65,78,.25)";span.style.textDecoration="line-through";}
+    el.appendChild(span);
+  }
+  flash(`+${d.added} / -${d.removed} / =${d.same}`);
+}
+async function runSequence(){
+  const tokens=$("#seq-in").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  const d=await api("/api/sequence",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({tokens})});
+  $("#seq-out").classList.remove("empty");
+  $("#seq-out").textContent=`tokens: ${d.count}\nverdict: ${d.verdict}\nestimated entropy: ${d.total_entropy_bits.toFixed(1)} bits\nlength: ${d.min_len}-${d.max_len}\ncharset: ${d.effective_charset}\n\n${d.note}`;
+}
+async function testScope(){
+  const url=$("#st-url").value.trim(); if(!url){flash("enter a URL");return;}
+  try{ const d=await api("/api/scope/test?url="+encodeURIComponent(url)); $("#st-result").textContent=d.valid?(d.in_scope?"✓ in scope":"✗ out of scope"):("invalid: "+d.error); }catch(e){}
+}
+
+buildNav(); select("proxy"); loadStats();
+</script>
+</body>
+</html>

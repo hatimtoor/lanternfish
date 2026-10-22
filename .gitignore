@@ -1,0 +1,23 @@
+# Built binaries
+/argus
+/argus.exe
+/argus-gui
+/argus-gui.exe
+*.exe
+
+# Local CA material and runtime profile (never commit secrets)
+argus-ca.pem
+argus-ca-key.pem
+webview-profile/
+
+# Saved projects / scan output
+*.project.json
+argus-project.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# release build output
+dist/

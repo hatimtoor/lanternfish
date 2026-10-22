@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Lanternfish">
+  <title>Lanternfish</title>
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffe489"/>
+      <stop offset="35%" stop-color="#ffd24a"/>
+      <stop offset="100%" stop-color="#ffd24a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2aa6c9"/>
+      <stop offset="100%" stop-color="#145a73"/>
+    </linearGradient>
+  </defs>
+  <!-- deep-water backdrop -->
+  <rect x="0" y="0" width="64" height="64" rx="14" fill="#0b1b2b"/>
+  <!-- the lantern's glow -->
+  <circle cx="46" cy="17" r="15" fill="url(#glow)"/>
+  <!-- lure stalk from the head to the light -->
+  <path d="M30 26 C 36 18, 42 16, 45 17" fill="none" stroke="#9fb3c0" stroke-width="2" stroke-linecap="round"/>
+  <!-- tail fin -->
+  <path d="M8 34 L 2 26 L 4 34 L 2 42 Z" fill="#145a73"/>
+  <!-- body -->
+  <ellipse cx="26" cy="37" rx="20" ry="12" fill="url(#body)"/>
+  <!-- lantern orb -->
+  <circle cx="46" cy="17" r="4.5" fill="#fff3c4"/>
+  <circle cx="46" cy="17" r="4.5" fill="none" stroke="#ffd24a" stroke-width="1.5"/>
+  <!-- eye -->
+  <circle cx="33" cy="33" r="3.4" fill="#f5fbff"/>
+  <circle cx="34" cy="33" r="1.7" fill="#0b1b2b"/>
+  <!-- toothy grin, a nod to the deep-sea hunter -->
+  <path d="M36 41 L 40 41 L 37.5 44 Z" fill="#eaf4f8"/>
+  <path d="M40 41 L 44 40 L 42 43.5 Z" fill="#eaf4f8"/>
+</svg>
