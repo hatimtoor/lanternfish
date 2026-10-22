@@ -18,10 +18,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/BurntSushi/toml"
 )
 
 const source = "https://raw.githubusercontent.com/RetireJS/retire.js/master/repository/jsrepository.json"
 const outPath = "internal/scan/checks/data/retirejs.json"
+
+const gitleaksSource = "https://raw.githubusercontent.com/gitleaks/gitleaks/master/config/gitleaks.toml"
+const gitleaksOut = "internal/scan/checks/data/gitleaks.json"
 
 type vuln struct {
 	Below       string `json:"below"`
@@ -92,6 +97,68 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("wrote %d signatures to %s (from retire.js)\n", len(out), outPath)
+
+	if err := syncGitleaks(); err != nil {
+		fmt.Fprintln(os.Stderr, "gitleaks:", err)
+		os.Exit(1)
+	}
+}
+
+// genSecret is the schema the scanner reads for generated secret rules.
+type genSecret struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Regex string `json:"regex"`
+}
+
+// syncGitleaks fetches the gitleaks rule set and writes the provider-specific
+// (non-generic, regex-sufficient) rules as secret signatures. Rules that lean
+// on entropy, or whose id is generic, are skipped to keep false positives low.
+func syncGitleaks() error {
+	raw, err := fetch(gitleaksSource)
+	if err != nil {
+		return err
+	}
+	var cfg struct {
+		Rules []struct {
+			ID          string  `toml:"id"`
+			Description string  `toml:"description"`
+			Regex       string  `toml:"regex"`
+			Entropy     float64 `toml:"entropy"`
+		} `toml:"rules"`
+	}
+	if err := toml.Unmarshal(raw, &cfg); err != nil {
+		return err
+	}
+	var out []genSecret
+	seen := map[string]bool{}
+	for _, r := range cfg.Rules {
+		if r.Regex == "" || r.Entropy > 0 || strings.Contains(r.ID, "generic") {
+			continue
+		}
+		if _, err := regexp.Compile(r.Regex); err != nil {
+			continue // not a Go-compatible regex
+		}
+		if seen[r.ID] {
+			continue
+		}
+		seen[r.ID] = true
+		name := r.Description
+		if name == "" {
+			name = r.ID
+		}
+		if len(name) > 120 {
+			name = name[:117] + "..."
+		}
+		out = append(out, genSecret{ID: r.ID, Name: name, Regex: r.Regex})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	b, _ := json.MarshalIndent(out, "", "  ")
+	if err := os.WriteFile(gitleaksOut, append(b, '\n'), 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("wrote %d secret rules to %s (from gitleaks)\n", len(out), gitleaksOut)
+	return nil
 }
 
 func fetch(url string) ([]byte, error) {

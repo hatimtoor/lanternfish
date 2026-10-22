@@ -11,11 +11,11 @@ import (
 	"lanternfish/internal/scan"
 )
 
-// sigData holds signature databases refreshed from public sources by
+// sigData holds the vulnerable-library signatures refreshed from retire.js by
 // `scripts/update-signatures.sh` (see tools/sigsync). They supplement the
 // curated libSigs below, so coverage stays current without hand-editing.
 //
-//go:embed data/*.json
+//go:embed data/retirejs.json
 var sigData embed.FS
 
 // libData is the on-disk schema for a generated library signature.
@@ -27,40 +27,31 @@ type libData struct {
 }
 
 func init() {
-	entries, err := sigData.ReadDir("data")
+	b, err := sigData.ReadFile("data/retirejs.json")
 	if err != nil {
 		return
 	}
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
-			continue
-		}
-		b, err := sigData.ReadFile("data/" + e.Name())
+	var items []libData
+	if json.Unmarshal(b, &items) != nil {
+		return
+	}
+	for _, it := range items {
+		re, err := regexp.Compile(it.Regex)
 		if err != nil {
 			continue
 		}
-		var items []libData
-		if json.Unmarshal(b, &items) != nil {
+		idx := -1
+		for i, n := range re.SubexpNames() {
+			if n == "ver" {
+				idx = i
+				break
+			}
+		}
+		parts := parseVerParts(it.Below)
+		if idx < 1 || parts == nil {
 			continue
 		}
-		for _, it := range items {
-			re, err := regexp.Compile(it.Regex)
-			if err != nil {
-				continue
-			}
-			idx := -1
-			for i, n := range re.SubexpNames() {
-				if n == "ver" {
-					idx = i
-					break
-				}
-			}
-			parts := parseVerParts(it.Below)
-			if idx < 1 || parts == nil {
-				continue
-			}
-			genSigs = append(genSigs, genSig{name: it.Name, re: re, verIdx: idx, fixedI: parts, fixed: it.Below, issue: it.Issue})
-		}
+		genSigs = append(genSigs, genSig{name: it.Name, re: re, verIdx: idx, fixedI: parts, fixed: it.Below, issue: it.Issue})
 	}
 }
 

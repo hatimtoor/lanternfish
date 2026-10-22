@@ -3,6 +3,7 @@ module lanternfish
 go 1.26.0
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808
 	github.com/quic-go/quic-go v0.64.1
 )
