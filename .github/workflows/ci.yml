@@ -24,3 +24,20 @@ jobs:
           done
       - name: Test
         run: go test ./...
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: |
+          go build -o lanternfish ./cmd/lanternfish
+          go build -o lanternfish-testbed ./cmd/lanternfish-testbed
+      - name: Measure accuracy (gated)
+        run: |
+          ./lanternfish-testbed --addr 127.0.0.1:9000 &
+          # Fail the build if detection recall drops below 90% or any false positive appears.
+          ./lanternfish bench benchmarks/testbed.json --min-recall 90 --max-fp 0

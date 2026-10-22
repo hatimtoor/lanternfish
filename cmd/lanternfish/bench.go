@@ -36,6 +36,8 @@ func cmdBench(args []string) {
 	insecure := fs.Bool("insecure", false, "skip upstream TLS verification")
 	fast := fs.Bool("fast", false, "skip wait-heavy checks (faster, misses blind/time-based)")
 	asJSON := fs.Bool("json", false, "emit the scorecard as JSON")
+	minRecall := fs.Int("min-recall", -1, "exit non-zero if detection recall (percent) is below this (gate for CI)")
+	maxFP := fs.Int("max-fp", -1, "exit non-zero if false positives exceed this (gate for CI)")
 	pos := mustParse(fs, args)
 
 	specPath := firstArg(pos)
@@ -102,35 +104,53 @@ func cmdBench(args []string) {
 	}
 	dur := time.Since(start).Round(time.Millisecond)
 
+	recall := 0
+	if expectedTotal > 0 {
+		recall = 100 * detected / expectedTotal
+	}
+
 	if *asJSON {
 		out := map[string]any{
 			"benchmark": spec.Name, "expected": expectedTotal, "detected": detected,
-			"recall": pct(detected, expectedTotal), "clean_cases": cleanCases,
+			"recall": fmt.Sprintf("%d%%", recall), "clean_cases": cleanCases,
 			"false_positives": falsePos, "duration": dur.String(), "cases": rows,
 		}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(out)
-		return
+	} else {
+		name := spec.Name
+		if name == "" {
+			name = specPath
+		}
+		fmt.Printf("Benchmark: %s (%s)\n\n", name, dur)
+		for _, r := range rows {
+			status := "ok"
+			if len(r.Missed) > 0 {
+				status = "MISSED " + strings.Join(r.Missed, ",")
+			}
+			if len(r.FPs) > 0 {
+				status = "FALSE-POSITIVE " + strings.Join(r.FPs, ",")
+			}
+			fmt.Printf("  %-34s %s\n", r.Path, status)
+		}
+		fmt.Printf("\nDetection: %d/%d expected findings (%d%% recall)\n", detected, expectedTotal, recall)
+		fmt.Printf("False positives: %d across %d clean case(s)\n", falsePos, cleanCases)
 	}
 
-	name := spec.Name
-	if name == "" {
-		name = specPath
+	// Gating for CI: fail the run if accuracy regressed past the thresholds.
+	failed := false
+	if *minRecall >= 0 && recall < *minRecall {
+		fmt.Fprintf(os.Stderr, "FAIL: recall %d%% is below the required %d%%\n", recall, *minRecall)
+		failed = true
 	}
-	fmt.Printf("Benchmark: %s (%s)\n\n", name, dur)
-	for _, r := range rows {
-		status := "ok"
-		if len(r.Missed) > 0 {
-			status = "MISSED " + strings.Join(r.Missed, ",")
-		}
-		if len(r.FPs) > 0 {
-			status = "FALSE-POSITIVE " + strings.Join(r.FPs, ",")
-		}
-		fmt.Printf("  %-34s %s\n", r.Path, status)
+	if *maxFP >= 0 && falsePos > *maxFP {
+		fmt.Fprintf(os.Stderr, "FAIL: %d false positive(s) exceeds the allowed %d\n", falsePos, *maxFP)
+		failed = true
 	}
-	fmt.Printf("\nDetection: %d/%d expected findings (%s recall)\n", detected, expectedTotal, pct(detected, expectedTotal))
-	fmt.Printf("False positives: %d across %d clean case(s)\n", falsePos, cleanCases)
+	if failed {
+		os.Exit(1)
+	}
 }
 
 // matchFound reports whether any detected check id equals or is prefixed by want
@@ -155,11 +175,4 @@ func waitReady(base string) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-}
-
-func pct(n, d int) string {
-	if d == 0 {
-		return "n/a"
-	}
-	return fmt.Sprintf("%.0f%%", 100*float64(n)/float64(d))
 }
