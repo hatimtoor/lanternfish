@@ -32,24 +32,30 @@ func (ReflectedXSS) Active(ctx context.Context, s scan.Sender, base *httpmsg.Req
 	}
 	body := resp.BodyString()
 
-	// The signature we injected, reflected verbatim, indicates the angle
-	// brackets and quotes were not encoded.
+	// The injected tag-start, reflected verbatim, indicates the opening angle
+	// bracket was not encoded — the marker immediately follows "<", so this
+	// concatenation can only come from our injection. We key on the tag-start
+	// rather than the full "<marker>" because some sinks mangle or drop the
+	// trailing ">" (or truncate the reflection) while still leaving an
+	// injectable "<marker" that an attacker can complete; requiring the closing
+	// bracket would miss those real cases.
+	open := "<" + marker
 	needle := fmt.Sprintf("<%s>", marker)
-	if !strings.Contains(body, needle) {
+	if !strings.Contains(body, open) {
 		return nil
 	}
 
 	conf := scan.ConfidenceFirm
 	// If the full breakout (including quotes) is present, confidence is higher.
-	if strings.Contains(body, payload) {
+	if strings.Contains(body, payload) || strings.Contains(body, needle) {
 		conf = scan.ConfidenceCertain
 	}
 	sev := scan.SeverityHigh
-	detail := fmt.Sprintf("Input in parameter %q is reflected into an HTML response without encoding the characters < > \" '. Injected marker %q was returned verbatim.", p.Name, needle)
+	detail := fmt.Sprintf("Input in parameter %q is reflected into an HTML response without encoding the character %q. Injected tag-start %q was returned verbatim.", p.Name, "<", open)
 	// Reflection-context awareness: if the marker only lands inside an HTML
 	// comment, it is far less likely to be exploitable, so downgrade rather than
 	// report it as a confident high-severity finding.
-	if rc := classifyReflection(body, needle); rc.found && rc.inComment {
+	if rc := classifyReflection(body, open); rc.found && rc.inComment {
 		conf = scan.ConfidenceTentative
 		sev = scan.SeverityLow
 		detail += " The reflection appears only inside an HTML comment, which limits exploitability unless the comment can be broken out of."
@@ -61,7 +67,7 @@ func (ReflectedXSS) Active(ctx context.Context, s scan.Sender, base *httpmsg.Req
 		Severity: sev, Confidence: conf,
 		Detail:      detail,
 		Remediation: "Contextually encode output and validate input. Prefer a templating layer that auto-escapes HTML.",
-		Evidence:    excerpt(body, needle),
+		Evidence:    excerpt(body, open),
 		CWE:         "CWE-79",
 	}}
 }
