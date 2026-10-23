@@ -42,6 +42,7 @@ func Active() []scan.ActiveCheck {
 		ReflectedXSS{},
 		SQLiError{},
 		PathTraversal{},
+		PathTraversalOracle{},
 		OpenRedirect{},
 		SSTI{},
 		CRLFInjection{},
@@ -67,6 +68,7 @@ var slowActiveIDs = map[string]bool{
 	"command-injection":     true, // time-based
 	"command-injection-oob": true, // out-of-band callback wait
 	"sqli-time-blind":       true,
+	"path-traversal-oracle": true, // many extra differential requests per point
 }
 
 // ActiveFast returns the active checks minus the slow (wait-heavy) ones.

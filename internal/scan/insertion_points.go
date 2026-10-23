@@ -172,7 +172,7 @@ func cookiePoints(base *httpmsg.Request) []InsertionPoint {
 					b.WriteString(ck.name)
 					b.WriteByte('=')
 					if i == idx {
-						b.WriteString(value)
+						b.WriteString(encodeCookieValue(value))
 					} else {
 						b.WriteString(ck.val)
 					}
@@ -183,6 +183,31 @@ func cookiePoints(base *httpmsg.Request) []InsertionPoint {
 		})
 	}
 	return pts
+}
+
+const cookieHex = "0123456789ABCDEF"
+
+// encodeCookieValue percent-encodes bytes that are not a valid RFC 6265
+// cookie-octet (space, '"', ',', ';', '\\', DEL and controls). Servers that
+// read a cookie normally URL-decode it, so an injection payload survives
+// transport intact; without this, Tomcat and similar truncate the value at the
+// first space or control character and silently drop the rest of the payload.
+// Characters that injection payloads rely on and that are already valid in a
+// cookie value ("'", "/", "*", "&", ":", "=") are left untouched.
+func encodeCookieValue(v string) string {
+	var b strings.Builder
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		if c == 0x21 || (c >= 0x23 && c <= 0x2B) || (c >= 0x2D && c <= 0x3A) ||
+			(c >= 0x3C && c <= 0x5B) || (c >= 0x5D && c <= 0x7E) {
+			b.WriteByte(c)
+			continue
+		}
+		b.WriteByte('%')
+		b.WriteByte(cookieHex[c>>4])
+		b.WriteByte(cookieHex[c&0x0F])
+	}
+	return b.String()
 }
 
 // fuzzableHeaders are request headers worth fuzzing when present: they are
