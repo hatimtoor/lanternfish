@@ -242,6 +242,20 @@ window.addEventListener('message',function(e){ document.getElementById('out').in
 		fmt.Fprintf(w, "<html><body><p>You searched for: %s</p></body></html>", esc)
 	})
 
+	// A safe JSON endpoint: parses JSON, echoes a field as JSON (properly
+	// encoded), no injection sink. For false-positive measurement.
+	mux.HandleFunc("/api/safe", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+		var in struct {
+			Name string `json:"name"`
+		}
+		_ = json.Unmarshal(body, &in)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		out, _ := json.Marshal(map[string]string{"hello": in.Name})
+		w.Write(out)
+	})
+
 	mux.HandleFunc("/.git/config", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = https://github.com/example/app.git\n"))
 	})

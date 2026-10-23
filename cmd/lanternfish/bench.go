@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
+	"lanternfish/internal/httpmsg"
 	"lanternfish/internal/service"
 	"lanternfish/internal/session"
 )
@@ -22,10 +24,41 @@ type benchSpec struct {
 }
 
 type benchCase struct {
-	Path   string   `json:"path"`             // appended to Base
-	Expect []string `json:"expect,omitempty"` // check ids that should fire (prefix match)
-	Clean  bool     `json:"clean,omitempty"`  // true = no high/critical finding should fire
-	Note   string   `json:"note,omitempty"`
+	Path    string            `json:"path"`              // appended to Base
+	Method  string            `json:"method,omitempty"`  // default GET
+	Headers map[string]string `json:"headers,omitempty"` // extra request headers
+	Cookie  string            `json:"cookie,omitempty"`  // Cookie header value
+	Body    string            `json:"body,omitempty"`    // request body (sets JSON CT if it looks like JSON)
+	Expect  []string          `json:"expect,omitempty"`  // check ids that should fire (prefix match)
+	Clean   bool              `json:"clean,omitempty"`   // true = no high/critical finding should fire
+	Note    string            `json:"note,omitempty"`
+}
+
+// buildRequest turns a case into an HTTP request against base.
+func buildRequest(base string, c benchCase) (*httpmsg.Request, error) {
+	u, err := url.Parse(base + c.Path)
+	if err != nil {
+		return nil, err
+	}
+	h := http.Header{}
+	for k, v := range c.Headers {
+		h.Set(k, v)
+	}
+	if c.Cookie != "" {
+		h.Set("Cookie", c.Cookie)
+	}
+	method := strings.ToUpper(c.Method)
+	if method == "" {
+		method = "GET"
+	}
+	if c.Body != "" && h.Get("Content-Type") == "" {
+		if strings.HasPrefix(strings.TrimSpace(c.Body), "{") {
+			h.Set("Content-Type", "application/json")
+		} else {
+			h.Set("Content-Type", "application/x-www-form-urlencoded")
+		}
+	}
+	return &httpmsg.Request{Method: method, URL: u, Scheme: u.Scheme, Host: u.Host, Header: h, Body: []byte(c.Body)}, nil
 }
 
 // cmdBench scores Lanternfish against a labeled benchmark spec. It is how we
@@ -75,11 +108,12 @@ func cmdBench(args []string) {
 
 	start := time.Now()
 	for _, c := range spec.Cases {
-		res, err := svc.ScanURLMode(ctx, spec.Base+c.Path, *fast)
 		got := map[string]string{} // check id -> severity
-		if err == nil {
-			for _, is := range res.Issues {
-				got[is.Check] = is.SeverityStr
+		if req, err := buildRequest(spec.Base, c); err == nil {
+			if res, err := svc.ScanRequestMode(ctx, req, *fast); err == nil {
+				for _, is := range res.Issues {
+					got[is.Check] = is.SeverityStr
+				}
 			}
 		}
 		r := row{Path: c.Path, Expect: c.Expect, Clean: c.Clean}

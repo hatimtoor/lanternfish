@@ -168,24 +168,36 @@ func (s *Service) ScanURL(ctx context.Context, target string) (*ScanResult, erro
 	return s.ScanURLMode(ctx, target, false)
 }
 
-// ScanURLMode scans one URL. When fast is true it uses the engine without the
-// wait-heavy checks (out-of-band and time-based), for quick passes.
+// ScanURLMode scans one URL with a GET. When fast is true it uses the engine
+// without the wait-heavy checks (out-of-band and time-based).
 func (s *Service) ScanURLMode(ctx context.Context, target string, fast bool) (*ScanResult, error) {
 	u, err := url.Parse(target)
 	if err != nil {
 		return nil, err
 	}
+	hdr := http.Header{"User-Agent": {"lanternfish"}}
+	base := &httpmsg.Request{
+		Method: "GET", URL: u, Scheme: u.Scheme, Host: u.Host, Header: hdr,
+	}
+	return s.ScanRequestMode(ctx, base, fast)
+}
+
+// ScanRequestMode runs the full passive + active pipeline against an arbitrary
+// request, so callers can exercise any method, body, headers, or cookies (and
+// thus every insertion-point kind). ScanURLMode is the GET shortcut.
+func (s *Service) ScanRequestMode(ctx context.Context, base *httpmsg.Request, fast bool) (*ScanResult, error) {
+	if base.Header == nil {
+		base.Header = http.Header{}
+	}
+	if base.Header.Get("User-Agent") == "" {
+		base.Header.Set("User-Agent", "lanternfish")
+	}
 	eng := s.eng
 	if fast {
 		eng = s.engFast
 	}
+	s.Sess.ApplyAuth(base.Header)
 	start := time.Now()
-	hdr := http.Header{"User-Agent": {"lanternfish"}}
-	s.Sess.ApplyAuth(hdr)
-	base := &httpmsg.Request{
-		Method: "GET", URL: u, Scheme: u.Scheme, Host: u.Host,
-		Header: hdr,
-	}
 	col := scan.NewCollector()
 	if resp, err := s.up.Send(ctx, base); err == nil {
 		s.Sess.Add(session.SourceScanner, &httpmsg.Transaction{Request: base, Response: resp})
@@ -198,7 +210,7 @@ func (s *Service) ScanURLMode(ctx context.Context, target string, fast bool) (*S
 	eng.Audit(ctx2, s.up, base, col)
 	issues := col.Issues()
 	s.Sess.AddIssues(issues...)
-	return &ScanResult{Target: target, Issues: issues, Duration: time.Since(start).Round(time.Millisecond).String()}, nil
+	return &ScanResult{Target: base.AbsoluteURL().String(), Issues: issues, Duration: time.Since(start).Round(time.Millisecond).String()}, nil
 }
 
 // AuditRequest runs active checks against one request's insertion points,

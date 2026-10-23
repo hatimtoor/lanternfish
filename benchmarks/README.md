@@ -18,19 +18,23 @@ lanternfish bench benchmarks/testbed.json
 You'll get a per-case result and a summary:
 
 ```
-Detection: 16/16 expected findings (100% recall)
-False positives: 0 across 1 clean case(s)
+Detection: 18/18 expected findings (100% recall)
+False positives: 0 across 3 clean case(s)
 ```
 
 Add `--json` for machine-readable output (useful in CI), or `--fast` to skip the
 wait-heavy blind/time-based checks (faster, but it will miss `blind-ssrf`).
+CI runs this on every push with `--min-recall 90 --max-fp 0`, so a drop in
+detection or any new false positive fails the build.
 
 ## Spec format
 
 A spec is JSON: a `base` URL and a list of `cases`. Each case names a `path` and
 either the check ids it should produce (`expect`, matched by prefix so `sqli`
 covers `sqli-error`, `sqli-mysql`, …) or `clean: true` (no high/critical finding
-should fire — this is how false positives are measured).
+should fire — this is how false positives are measured). A case may also set
+`method`, `headers`, `cookie`, and `body`, so you can exercise JSON bodies,
+cookies, and headers, not just GET parameters.
 
 ```json
 {
@@ -38,7 +42,9 @@ should fire — this is how false positives are measured).
   "base": "http://127.0.0.1:8080",
   "cases": [
     {"path": "/item?id=1", "expect": ["sqli"]},
-    {"path": "/about",     "clean": true}
+    {"path": "/api/user", "method": "POST", "body": "{\"name\":\"x\"}", "expect": ["sqli"]},
+    {"path": "/account", "cookie": "sid=abc", "expect": ["sqli"]},
+    {"path": "/about", "clean": true}
   ]
 }
 ```

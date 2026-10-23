@@ -18,6 +18,10 @@
     {"path": "/cors",                        "expect": ["cors-misconfig"]},
     {"path": "/app.js",                      "expect": ["source-map-disclosure"]},
     {"path": "/leaky",                       "expect": ["pii-credit-card"]},
-    {"path": "/safe?q=hello",                "clean": true, "note": "escaped output + hardening headers: expect no high/critical finding"}
+    {"path": "/api/profile", "method": "POST", "body": "{\"name\":\"bob\"}", "expect": ["sqli"], "note": "SQLi via a JSON body value"},
+    {"path": "/account", "cookie": "sid=abc123", "expect": ["sqli"], "note": "SQLi via a cookie value"},
+    {"path": "/safe?q=hello",                "clean": true, "note": "escaped output + hardening headers: expect no high/critical finding"},
+    {"path": "/api/safe", "method": "POST", "body": "{\"name\":\"bob\"}", "clean": true, "note": "safe JSON echo: expect no high/critical finding"},
+    {"path": "/login",                       "clean": true, "note": "login form: expect no high/critical finding"}
   ]
 }
