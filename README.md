@@ -48,8 +48,33 @@ with no arguments prints the same orientation.
 Grab a prebuilt binary for your platform from the project's Releases (built by
 CI for Windows, Linux, and macOS on amd64 and arm64), make it executable, and
 run it — no Go toolchain needed. To build your own set of release binaries,
-run `scripts/build-release.sh` into `./dist`. Verify downloads against the
-published `SHA256SUMS.txt`.
+run `scripts/build-release.sh` into `./dist`.
+
+## Verifying your download
+
+A security tool should be one you can trust before you run it. Every release
+binary is:
+
+- **Checksummed** — compare it against the published `SHA256SUMS.txt`
+  (`sha256sum -c SHA256SUMS.txt`).
+- **Attested** — GitHub's CI attaches signed build provenance. Verify that this
+  exact binary was built by this repo's workflow from this source:
+
+  ```
+  gh attestation verify <file> --repo hatimtoor/lanternfish
+  ```
+
+  This is a free, tamper-evident alternative to code signing: it proves where
+  the binary came from without a paid certificate.
+- **Reproducible** — builds use `-trimpath` and are CGO-free, so you can rebuild
+  from a tag and get the same bytes.
+
+Honest note: the binaries are **not** code-signed with a paid Authenticode or
+Apple certificate, so Windows SmartScreen or macOS Gatekeeper may warn on first
+run. That is expected for an unsigned open-source binary. If you would rather
+not click through a warning, build from source (below) — it takes one command
+and sidesteps the issue entirely. Signing with a real certificate is on the
+roadmap once the project can fund one.
 
 ## Build
 
