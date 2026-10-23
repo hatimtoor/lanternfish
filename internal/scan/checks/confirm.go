@@ -131,29 +131,6 @@ func confirmScaledDelay(ctx context.Context, s scan.Sender, p scan.InsertionPoin
 	return d1, true
 }
 
-// injectableHeaders are the request headers worth probing for server-side
-// injection (OS command / SQL). They are the headers real applications
-// commonly read and then pass into a shell, query, or log pipeline. Probing
-// every header is too slow and noisy, so the wait-heavy time-based and
-// out-of-band checks restrict header-vector testing to this curated set.
-var injectableHeaders = map[string]bool{
-	"user-agent": true, "referer": true, "x-forwarded-for": true,
-	"x-forwarded-host": true, "x-forwarded-by": true, "forwarded": true,
-	"x-real-ip": true, "client-ip": true, "true-client-ip": true,
-	"x-client-ip": true, "x-api-version": true, "x-request-id": true,
-	"x-wap-profile": true, "from": true, "x-originating-ip": true,
-}
-
-// headerVectorAllowed reports whether a wait-heavy server-side-injection check
-// should probe this insertion point. Non-header points are always allowed;
-// header points only when the header is in the injectable set above.
-func headerVectorAllowed(p scan.InsertionPoint) bool {
-	if p.Kind != scan.KindHeader {
-		return true
-	}
-	return injectableHeaders[strings.ToLower(p.Name)]
-}
-
 // vectorLabel describes an insertion point for a finding message.
 func vectorLabel(p scan.InsertionPoint) string {
 	switch p.Kind {

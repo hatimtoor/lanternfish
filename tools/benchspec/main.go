@@ -143,6 +143,11 @@ func main() {
 		} else {
 			c.Path = "/benchmark/" + name
 		}
+		// Benchmark servlets put the real sink in doPost (doGet either delegates
+		// to it or just renders a landing page that sets the test cookie), so the
+		// request must be a POST to exercise the vulnerability rather than hit the
+		// landing page. The official Benchmark harness drives these the same way.
+		c.Method = "POST"
 		if isVuln {
 			c.Expect = []string{check}
 		} else {

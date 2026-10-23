@@ -34,9 +34,6 @@ func (CommandInjection) AppliesTo(k scan.Kind) bool {
 const cmdiDelay = 3
 
 func (c CommandInjection) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
-	if !headerVectorAllowed(p) {
-		return nil
-	}
 	// Median baseline over a few samples so one slow request does not look like
 	// a successful delay.
 	bt, ok := medianTiming(ctx, s, p, p.Base, 3)

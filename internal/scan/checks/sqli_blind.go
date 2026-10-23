@@ -101,9 +101,6 @@ func (TimeBlindSQLi) AppliesTo(k scan.Kind) bool {
 const sqliDelay = 3
 
 func (TimeBlindSQLi) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
-	if !headerVectorAllowed(p) {
-		return nil
-	}
 	// Median baseline over a few samples so jitter does not look like a delay.
 	bt, ok := medianTiming(ctx, s, p, p.Base, 3)
 	if !ok {

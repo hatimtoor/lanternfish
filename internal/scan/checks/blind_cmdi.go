@@ -41,9 +41,6 @@ func (BlindCommandInjection) AppliesTo(k scan.Kind) bool {
 }
 
 func (BlindCommandInjection) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
-	if !headerVectorAllowed(p) {
-		return nil
-	}
 	interactor, ok := scan.InteractorFrom(ctx)
 	if !ok {
 		return nil

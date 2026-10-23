@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"lanternfish/internal/httpmsg"
@@ -69,33 +70,58 @@ type CommandInjectionInband struct{}
 func (CommandInjectionInband) ID() string { return "command-injection-inband" }
 
 func (CommandInjectionInband) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+	// POSIX shell: arithmetic expansion the shell computes (the literal
+	// expression never contains the product, so a reflected echo can't fake it).
 	a, b := 13, 17
 	tag := randMarker("ar")
-	want := fmt.Sprintf("%s%d%s", tag, a*b, tag)
-	// Shell arithmetic expansion; the wrappers try several injection contexts.
-	payloads := []string{
-		fmt.Sprintf(";echo %s$((%d*%d))%s", tag, a, b, tag),
-		fmt.Sprintf("|echo %s$((%d*%d))%s", tag, a, b, tag),
-		fmt.Sprintf("& echo %s$((%d*%d))%s", tag, a, b, tag),
-		fmt.Sprintf("`echo %s$((%d*%d))%s`", tag, a, b, tag),
-		fmt.Sprintf("$(echo %s$((%d*%d))%s)", tag, a, b, tag),
+	wantSh := fmt.Sprintf("%s%d%s", tag, a*b, tag)
+	// Windows cmd.exe: `set /a` prints the product. cmd.exe does not evaluate
+	// $((...)) and does not treat ';'/'|' the same as POSIX, so Windows command
+	// injection (e.g. `cmd.exe /c echo <input>`) needs its own `&`-chained
+	// payloads. Distinctive operands keep the product from colliding by chance.
+	c, d := 4099, 4111
+	wantWin := strconv.Itoa(c * d) // 16850989
+
+	// Fetch a baseline once so a product/tag already on the page is not a false
+	// positive.
+	var baseBody string
+	if r, err := s.Send(ctx, p.Mutate(p.Base)); err == nil && r != nil {
+		baseBody = r.BodyString()
 	}
-	for _, pl := range payloads {
+
+	type probe struct {
+		payload string
+		want    string
+		conf    scan.Confidence
+		how     string
+	}
+	probes := []probe{
+		{fmt.Sprintf(";echo %s$((%d*%d))%s", tag, a, b, tag), wantSh, scan.ConfidenceCertain, "a POSIX shell arithmetic expansion"},
+		{fmt.Sprintf("|echo %s$((%d*%d))%s", tag, a, b, tag), wantSh, scan.ConfidenceCertain, "a POSIX shell arithmetic expansion"},
+		{fmt.Sprintf("& echo %s$((%d*%d))%s", tag, a, b, tag), wantSh, scan.ConfidenceCertain, "a POSIX shell arithmetic expansion"},
+		{fmt.Sprintf("`echo %s$((%d*%d))%s`", tag, a, b, tag), wantSh, scan.ConfidenceCertain, "a POSIX shell arithmetic expansion"},
+		{fmt.Sprintf("$(echo %s$((%d*%d))%s)", tag, a, b, tag), wantSh, scan.ConfidenceCertain, "a POSIX shell arithmetic expansion"},
+		{fmt.Sprintf("& set /a %d*%d", c, d), wantWin, scan.ConfidenceFirm, "a Windows cmd.exe `set /a` expression"},
+		{fmt.Sprintf("&& set /a %d*%d", c, d), wantWin, scan.ConfidenceFirm, "a Windows cmd.exe `set /a` expression"},
+		{fmt.Sprintf("| set /a %d*%d", c, d), wantWin, scan.ConfidenceFirm, "a Windows cmd.exe `set /a` expression"},
+	}
+	for _, pr := range probes {
 		if ctx.Err() != nil {
 			return nil
 		}
-		resp, err := s.Send(ctx, p.Mutate(p.Base+pl))
+		resp, err := s.Send(ctx, p.Mutate(p.Base+pr.payload))
 		if err != nil || resp == nil {
 			continue
 		}
-		if strings.Contains(resp.BodyString(), want) {
+		body := resp.BodyString()
+		if strings.Contains(body, pr.want) && !strings.Contains(baseBody, pr.want) {
 			return []*scan.Issue{{
 				Check: "command-injection-inband", Name: "OS command injection (in-band)",
 				URL: base.AbsoluteURL().String(), Param: p.Name,
-				Severity: scan.SeverityCritical, Confidence: scan.ConfidenceCertain,
-				Detail:      "Parameter " + p.Name + " executed a shell arithmetic expansion: the injected expression evaluated to " + want + " in the response, confirming OS command injection.",
+				Severity: scan.SeverityCritical, Confidence: pr.conf,
+				Detail:      "Input in " + vectorLabel(p) + " executed " + pr.how + ": the injected expression evaluated to " + pr.want + " in the response, confirming OS command injection.",
 				Remediation: "Never pass user input to a shell. Use argument arrays without a shell and validate input.",
-				Evidence:    want, CWE: "CWE-78",
+				Evidence:    pr.want, CWE: "CWE-78",
 			}}
 		}
 	}
