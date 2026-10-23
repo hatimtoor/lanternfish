@@ -41,7 +41,9 @@ import (
 	"lanternfish/internal/session"
 )
 
-const version = "0.3.0"
+// version is the build version. It defaults to "dev" for local builds and is
+// stamped with the release tag at build time via -ldflags "-X main.version=...".
+var version = "dev"
 
 func main() {
 	log.SetFlags(0)

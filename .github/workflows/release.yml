@@ -24,17 +24,18 @@ jobs:
         run: |
           mkdir -p dist
           VERSION="${GITHUB_REF_NAME}"
+          STAMP="${VERSION#v}" # drop the leading v for the in-binary version
           # CLI for every platform.
           for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
             os="${target%/*}"; arch="${target#*/}"
             ext=""; [ "$os" = windows ] && ext=".exe"
             out="dist/lanternfish_${VERSION}_${os}_${arch}${ext}"
             echo "building $out"
-            GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o "$out" ./cmd/lanternfish
+            GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${STAMP}" -o "$out" ./cmd/lanternfish
           done
           # Native desktop app is Windows-only.
           for arch in amd64 arm64; do
-            GOOS=windows GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H windowsgui" -o "dist/lanternfish-gui_${VERSION}_windows_${arch}.exe" ./cmd/lanternfish-gui
+            GOOS=windows GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H windowsgui -X main.version=${STAMP}" -o "dist/lanternfish-gui_${VERSION}_windows_${arch}.exe" ./cmd/lanternfish-gui
           done
           (cd dist && sha256sum * > SHA256SUMS.txt)
           ls -l dist
