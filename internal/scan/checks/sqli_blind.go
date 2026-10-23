@@ -91,7 +91,7 @@ func (TimeBlindSQLi) ID() string { return "sqli-time-blind" }
 // not sleep-probe every header and path segment.
 func (TimeBlindSQLi) AppliesTo(k scan.Kind) bool {
 	switch k {
-	case scan.KindQuery, scan.KindBody, scan.KindJSON, scan.KindCookie:
+	case scan.KindQuery, scan.KindBody, scan.KindJSON, scan.KindCookie, scan.KindHeader:
 		return true
 	default:
 		return false
@@ -101,6 +101,9 @@ func (TimeBlindSQLi) AppliesTo(k scan.Kind) bool {
 const sqliDelay = 3
 
 func (TimeBlindSQLi) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+	if !headerVectorAllowed(p) {
+		return nil
+	}
 	// Median baseline over a few samples so jitter does not look like a delay.
 	bt, ok := medianTiming(ctx, s, p, p.Base, 3)
 	if !ok {

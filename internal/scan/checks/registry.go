@@ -46,6 +46,7 @@ func Active() []scan.ActiveCheck {
 		SSTI{},
 		CRLFInjection{},
 		CommandInjection{},
+		BlindCommandInjection{},
 		BlindSSRF{},
 		LDAPInjection{},
 		XPathInjection{},
@@ -62,9 +63,10 @@ func Active() []scan.ActiveCheck {
 // slowActiveIDs are active checks that add fixed per-insertion-point waits
 // (out-of-band callbacks or time-based inference). Fast mode skips them.
 var slowActiveIDs = map[string]bool{
-	"blind-ssrf":        true,
-	"command-injection": true, // time-based
-	"sqli-time-blind":   true,
+	"blind-ssrf":            true,
+	"command-injection":     true, // time-based
+	"command-injection-oob": true, // out-of-band callback wait
+	"sqli-time-blind":       true,
 }
 
 // ActiveFast returns the active checks minus the slow (wait-heavy) ones.

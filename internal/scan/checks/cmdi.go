@@ -19,10 +19,11 @@ func (CommandInjection) ID() string { return "command-injection" }
 
 // AppliesTo limits time-based command-injection inference to the insertion
 // points where it realistically occurs, so it does not sleep-probe every
-// header and path segment.
+// header and path segment. Header points are allowed but gated in Active to a
+// curated set of headers apps commonly pass to a shell (see headerVectorAllowed).
 func (CommandInjection) AppliesTo(k scan.Kind) bool {
 	switch k {
-	case scan.KindQuery, scan.KindBody, scan.KindJSON, scan.KindCookie:
+	case scan.KindQuery, scan.KindBody, scan.KindJSON, scan.KindCookie, scan.KindHeader:
 		return true
 	default:
 		return false
@@ -33,6 +34,9 @@ func (CommandInjection) AppliesTo(k scan.Kind) bool {
 const cmdiDelay = 3
 
 func (c CommandInjection) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+	if !headerVectorAllowed(p) {
+		return nil
+	}
 	// Median baseline over a few samples so one slow request does not look like
 	// a successful delay.
 	bt, ok := medianTiming(ctx, s, p, p.Base, 3)
