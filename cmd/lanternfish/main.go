@@ -73,6 +73,8 @@ func main() {
 		cmdReplay(os.Args[2:])
 	case "lab":
 		cmdLab(os.Args[2:])
+	case "learn":
+		cmdLearn(os.Args[2:])
 	case "collaborator":
 		cmdCollaborator(os.Args[2:])
 	case "ca":
@@ -119,6 +121,7 @@ usage:
   lanternfish explain <check> | --list                        explain a finding: why it matters, how to confirm/fix
   lanternfish bench   <spec.json> [--fast] [--json]           score detection + false positives against a labeled benchmark
   lanternfish lab     [--addr 127.0.0.1:9000]                  practice range: legal, vulnerable challenges to learn on
+  lanternfish learn   [challenge]                              the learning curriculum (ordered path; or one challenge's solution)
   lanternfish guide   <url>                                    narrated, step-by-step first assessment (great for learning)
   lanternfish crawl   <seed> [--audit] [--max N] [--json]     crawl a site; optionally audit findings
   lanternfish replay  <url> [--method GET] [--data ..]        send one request, show response
@@ -661,6 +664,50 @@ func wrap(s string, width int) string {
 		col += len(w)
 	}
 	return b.String()
+}
+
+// ---- learn (curriculum) ----
+
+func cmdLearn(args []string) {
+	fs := newFlagSet("learn")
+	pos := mustParse(fs, args)
+
+	// Order the challenges easy -> medium -> hard as a learning path.
+	rank := map[string]int{"easy": 0, "medium": 1, "hard": 2}
+	ordered := append([]labs.Challenge(nil), labs.Challenges...)
+	sort.SliceStable(ordered, func(i, j int) bool { return rank[ordered[i].Difficulty] < rank[ordered[j].Difficulty] })
+
+	if id := firstArg(pos); id != "" {
+		for _, c := range ordered {
+			if c.ID == id {
+				fmt.Printf("%s  [%s · %s]\n\n", c.Title, c.OWASP, c.Difficulty)
+				fmt.Printf("Goal\n  %s\n\n", wrap(c.Objective, 76))
+				fmt.Printf("Brief\n%s\n\n", indent(c.Brief))
+				fmt.Printf("Solution\n%s\n\n", indent(c.Solution))
+				fmt.Printf("Learn more (free)\n  %s\n", c.Resource)
+				return
+			}
+		}
+		log.Fatalf("learn: no challenge %q (run `lanternfish learn` for the list)", id)
+	}
+
+	fmt.Println("Lanternfish learning path — work top to bottom.")
+	fmt.Println("Start the range with `lanternfish lab`, solve each in your browser, then")
+	fmt.Println("`lanternfish learn <id>` for the worked solution.")
+	fmt.Println()
+	for i, c := range ordered {
+		fmt.Printf("%2d. %-28s %s\n", i+1, c.Title+" ("+c.ID+")", c.OWASP)
+		fmt.Printf("    %-28s %s\n", "["+c.Difficulty+"]", oneLineWrap(c.Objective))
+	}
+	fmt.Printf("\n%d challenges covering the OWASP Top 10. Free lessons linked per topic.\n", len(ordered))
+}
+
+// oneLineWrap trims an objective to a single readable line.
+func oneLineWrap(s string) string {
+	if len(s) > 90 {
+		return s[:87] + "..."
+	}
+	return s
 }
 
 // ---- lab (practice range) ----

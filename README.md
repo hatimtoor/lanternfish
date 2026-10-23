@@ -123,6 +123,7 @@ the recommended way to use the UI there.
 ```
 lanternfish lab                      legal, deliberately vulnerable practice range
 lanternfish guide <url>              narrated step-by-step first assessment
+lanternfish learn                    the OWASP-mapped learning path (and per-challenge solutions)
 lanternfish explain <check>          what a finding means, how to confirm and fix it
 ```
 

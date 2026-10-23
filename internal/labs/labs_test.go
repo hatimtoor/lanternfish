@@ -95,3 +95,11 @@ func TestSQLiLogin(t *testing.T) {
 		t.Fatalf("sqli bypass did not reveal flag: %s", b)
 	}
 }
+
+func TestCurriculumComplete(t *testing.T) {
+	for _, c := range labs.Challenges {
+		if c.OWASP == "" || c.Objective == "" || c.Solution == "" || c.Resource == "" {
+			t.Fatalf("challenge %q is missing curriculum fields", c.ID)
+		}
+	}
+}

@@ -16,7 +16,7 @@ import (
 	"sync"
 )
 
-// Challenge describes one practice exercise.
+// Challenge describes one practice exercise and its place in the curriculum.
 type Challenge struct {
 	ID         string
 	Title      string
@@ -27,6 +27,88 @@ type Challenge struct {
 	Flag       string
 	// Start is the path the learner attacks (shown in the brief).
 	Start string
+
+	// Curriculum fields.
+	OWASP     string // mapped OWASP Top 10 (2021) category
+	Objective string // what you'll learn
+	Solution  string // worked solution, revealed after (or on demand)
+	Resource  string // a free place to learn more
+}
+
+// curriculum fills the learning fields for each challenge by id. Kept separate
+// so the challenge definitions above stay focused on the exercise itself.
+var curriculum = map[string]struct{ owasp, objective, solution, resource string }{
+	"xss": {
+		"A03:2021 Injection (XSS)",
+		"Learn how unencoded output lets attacker HTML/JS run in a victim's browser, and why contextual output encoding is the fix.",
+		"Set name to <img src=x onerror=alert(1)>. The handler runs because the value is written into the page without encoding < > and quotes.",
+		"https://portswigger.net/web-security/cross-site-scripting",
+	},
+	"sqli": {
+		"A03:2021 Injection (SQL)",
+		"Learn how string-built SQL lets you change a query's meaning, and why parameterized queries stop it.",
+		"Username: admin'--  (trailing space), any password. The quote closes the string and -- comments out the password check, so the WHERE matches admin.",
+		"https://portswigger.net/web-security/sql-injection",
+	},
+	"idor": {
+		"A01:2021 Broken Access Control",
+		"Learn that trusting a client-supplied id without an ownership check lets you read other users' data.",
+		"Change id=1 to id=2. The server never checks that the account belongs to you.",
+		"https://portswigger.net/web-security/access-control/idor",
+	},
+	"traversal": {
+		"A01:2021 Broken Access Control (Path Traversal)",
+		"Learn how ../ sequences escape an intended directory to read arbitrary files, and why paths must be validated.",
+		"Set name=../secret.txt to climb out of the serving folder and read the secret at the root.",
+		"https://portswigger.net/web-security/file-path-traversal",
+	},
+	"cmdi": {
+		"A03:2021 Injection (OS Command)",
+		"Learn how user input reaching a shell lets you append your own commands, and why you must never build shell strings from input.",
+		"Set host=127.0.0.1; id — the ; chains a second command the shell runs.",
+		"https://portswigger.net/web-security/os-command-injection",
+	},
+	"ssrf": {
+		"A10:2021 Server-Side Request Forgery",
+		"Learn how a server fetching a user-supplied URL can be made to reach internal-only systems.",
+		"Point url at the app's own internal path, e.g. url=http://127.0.0.1:PORT/lab/internal (use this server's port).",
+		"https://portswigger.net/web-security/ssrf",
+	},
+	"redirect": {
+		"A01:2021 Broken Access Control (Open Redirect)",
+		"Learn how an unvalidated redirect target powers convincing phishing from a trusted domain.",
+		"Set next=https://evil.example/ — the app redirects anywhere, so a link on the trusted site sends victims off-site.",
+		"https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
+	},
+	"ssti": {
+		"A03:2021 Injection (Template)",
+		"Learn how input rendered as a template gets evaluated by the engine, which can reach code execution.",
+		"Set name={{7*7}} and look for 49 — proof the template engine evaluated your expression.",
+		"https://portswigger.net/web-security/server-side-template-injection",
+	},
+	"storedxss": {
+		"A03:2021 Injection (Stored XSS)",
+		"Learn how input saved and shown to others without encoding runs for every visitor — more dangerous than reflected XSS.",
+		"Post a comment containing <script>alert(1)</script> (or <img src=x onerror=alert(1)>), then load the page.",
+		"https://portswigger.net/web-security/cross-site-scripting/stored",
+	},
+	"jwt": {
+		"A07:2021 Identification and Authentication Failures",
+		"Learn how a JWT whose signature isn't verified can be forged to impersonate anyone.",
+		"Base64url-encode header {\"alg\":\"none\"} and payload {\"role\":\"admin\"}, join with a dot and a trailing dot (empty signature): <header>.<payload>. — pass it as token.",
+		"https://portswigger.net/web-security/jwt",
+	},
+}
+
+func init() {
+	for i := range Challenges {
+		if c, ok := curriculum[Challenges[i].ID]; ok {
+			Challenges[i].OWASP = c.owasp
+			Challenges[i].Objective = c.objective
+			Challenges[i].Solution = c.solution
+			Challenges[i].Resource = c.resource
+		}
+	}
 }
 
 // Challenges is the ordered catalogue. Flags are static so verification is
