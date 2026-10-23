@@ -107,7 +107,11 @@ func cmdBench(args []string) {
 	var rows []row
 
 	start := time.Now()
-	for _, c := range spec.Cases {
+	progress := !*asJSON || os.Getenv("LANTERNFISH_BENCH_PROGRESS") != ""
+	for i, c := range spec.Cases {
+		if progress {
+			fmt.Fprintf(os.Stderr, "[%d/%d] scanning %s\n", i+1, len(spec.Cases), c.Path)
+		}
 		got := map[string]string{} // check id -> severity
 		if req, err := buildRequest(spec.Base, c); err == nil {
 			if res, err := svc.ScanRequestMode(ctx, req, *fast); err == nil {
