@@ -193,16 +193,32 @@ var fuzzableHeaders = []string{
 	"X-Real-IP", "True-Client-IP", "X-Client-IP", "Forwarded", "X-Api-Version",
 }
 
-// headerPoints yields insertion points for selected request headers present on
-// the request.
+// skipHeaders are structural, transport, or auth headers that must not be
+// fuzzed (mutating them breaks the request or the session rather than testing
+// the app). Any other present header is a candidate — custom/application
+// headers are a real injection vector.
+var skipHeaders = map[string]bool{
+	"host": true, "content-length": true, "content-type": true, "connection": true,
+	"transfer-encoding": true, "accept": true, "accept-encoding": true, "accept-language": true,
+	"accept-charset": true, "cookie": true, "authorization": true, "proxy-authorization": true,
+	"upgrade": true, "cache-control": true, "pragma": true, "date": true, "range": true,
+	"expect": true, "te": true, "trailer": true,
+}
+
+// maxHeaderPoints bounds how many headers one request contributes.
+const maxHeaderPoints = 12
+
+// headerPoints yields insertion points for the curated headers and for any
+// other non-structural header present on the request (custom application
+// headers are a real injection vector, as scanner benchmarks show).
 func headerPoints(base *httpmsg.Request) []InsertionPoint {
 	var pts []InsertionPoint
-	for _, h := range fuzzableHeaders {
-		orig := base.Header.Get(h)
-		if orig == "" {
-			continue
+	seen := map[string]bool{}
+	add := func(name, orig string) {
+		if orig == "" || seen[strings.ToLower(name)] || len(pts) >= maxHeaderPoints {
+			return
 		}
-		name := h
+		seen[strings.ToLower(name)] = true
 		pts = append(pts, InsertionPoint{
 			Kind: KindHeader, Name: name, Base: orig,
 			build: func(value string) *httpmsg.Request {
@@ -211,6 +227,17 @@ func headerPoints(base *httpmsg.Request) []InsertionPoint {
 				return c
 			},
 		})
+	}
+	for _, h := range fuzzableHeaders {
+		add(h, base.Header.Get(h))
+	}
+	// Any other present, non-structural header (e.g. a custom X-* or an
+	// application-specific header).
+	for name, vals := range base.Header {
+		if skipHeaders[strings.ToLower(name)] {
+			continue
+		}
+		add(name, firstOr(vals, ""))
 	}
 	return pts
 }
