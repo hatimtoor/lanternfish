@@ -43,12 +43,35 @@ takes you from install to your first finding using the built-in, legal practice
 range (`lanternfish lab`) and the narrated workflow (`lanternfish guide`). Running `lanternfish`
 with no arguments prints the same orientation.
 
-## Download
+## Install
 
-Grab a prebuilt binary for your platform from the project's Releases (built by
-CI for Windows, Linux, and macOS on amd64 and arm64), make it executable, and
-run it — no Go toolchain needed. To build your own set of release binaries,
-run `scripts/build-release.sh` into `./dist`.
+Pick whichever fits your platform — no Go toolchain needed.
+
+**Linux / macOS (one line):**
+
+```
+curl -fsSL https://raw.githubusercontent.com/hatimtoor/lanternfish/main/install.sh | sh
+```
+
+It downloads the right binary for your OS and architecture, verifies its
+checksum, and installs it.
+
+**Windows (Scoop):**
+
+```
+scoop install https://raw.githubusercontent.com/hatimtoor/lanternfish/main/packaging/scoop/lanternfish.json
+```
+
+**macOS / Linux (Homebrew):**
+
+```
+brew install --formula https://raw.githubusercontent.com/hatimtoor/lanternfish/main/packaging/homebrew/lanternfish.rb
+```
+
+**Direct download:** grab a prebuilt binary from the
+[Releases](https://github.com/hatimtoor/lanternfish/releases) page (Windows,
+Linux, macOS; amd64 and arm64), make it executable, and run it. To build your
+own set, run `scripts/build-release.sh` into `./dist`.
 
 ## Verifying your download
 

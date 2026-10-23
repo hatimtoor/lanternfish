@@ -41,3 +41,13 @@ jobs:
           ./lanternfish-testbed --addr 127.0.0.1:9000 &
           # Fail the build if detection recall drops below 90% or any false positive appears.
           ./lanternfish bench benchmarks/testbed.json --min-recall 90 --max-fp 0
+
+  install-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test the one-line installer end to end
+        run: |
+          sh install.sh
+          export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+          lanternfish version
