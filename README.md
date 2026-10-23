@@ -272,6 +272,30 @@ lanternfish collaborator --addr :80 --control :8085 --domain http://oast.example
 #   LANTERNFISH_COLLABORATOR_SECRET=<printed secret>
 ```
 
+### APIs and authenticated apps
+
+Point Lanternfish at an OpenAPI 3 or Swagger 2 spec to audit every documented
+endpoint — the modern-app equivalent of crawling:
+
+```
+lanternfish openapi api.json --base https://api.example.com
+```
+
+It reads the spec, fills in sample parameters and request bodies so each
+endpoint responds, and scans them all. For APIs behind a login, send an auth
+header or cookie — these apply to every request:
+
+```
+lanternfish openapi api.json --base https://api.example.com \
+  --auth-header "Authorization: Bearer <token>"
+
+lanternfish auto https://app.example.com --cookie "session=<value>"
+```
+
+`auto` and `openapi` both accept `--auth-header` and `--cookie`. For full login
+flows (submitting a form, extracting a token), use a login macro via the API or
+MCP, which establishes the session for all later scanner traffic.
+
 ### HTTP/3
 
 Lanternfish can test servers that speak HTTP/3 (QUIC): `lanternfish scan --http3`, `lanternfish

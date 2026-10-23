@@ -31,6 +31,7 @@ import (
 	"lanternfish/internal/kb"
 	"lanternfish/internal/labs"
 	"lanternfish/internal/oast"
+	"lanternfish/internal/openapi"
 	"lanternfish/internal/proxy"
 	"lanternfish/internal/replay"
 	"lanternfish/internal/report"
@@ -67,6 +68,8 @@ func main() {
 		cmdGuide(os.Args[2:])
 	case "auto":
 		cmdAuto(os.Args[2:])
+	case "openapi":
+		cmdOpenAPI(os.Args[2:])
 	case "crawl":
 		cmdCrawl(os.Args[2:])
 	case "replay":
@@ -118,6 +121,7 @@ usage:
   lanternfish proxy   [--addr :8080] [--insecure]             start intercepting proxy only
   lanternfish scan    <url> [--insecure] [--json] [--fast]    active+passive scan of a URL
   lanternfish auto    <url> [--browser] [--fast] [--json]     autopilot: crawl + audit everything, one command
+  lanternfish openapi <spec> --base <url> [--auth-header H]   scan every endpoint in an OpenAPI/Swagger spec (great for APIs)
   lanternfish explain <check> | --list                        explain a finding: why it matters, how to confirm/fix
   lanternfish bench   <spec.json> [--fast] [--json]           score detection + false positives against a labeled benchmark
   lanternfish lab     [--addr 127.0.0.1:9000]                  practice range: legal, vulnerable challenges to learn on
@@ -349,6 +353,8 @@ func cmdAuto(args []string) {
 	maxPages := fs.Int("max", 100, "crawl page budget")
 	depth := fs.Int("depth", 3, "crawl link depth")
 	reportFile := fs.String("report", "", "write an HTML report of all issues to this file")
+	authHeader := fs.String("auth-header", "", "an auth header to send on every request, e.g. \"Authorization: Bearer <token>\"")
+	cookie := fs.String("cookie", "", "a Cookie header value to send for authenticated scanning")
 	yes := fs.Bool("yes", false, "skip the authorization confirmation (for non-interactive use)")
 	pos := mustParse(fs, args)
 
@@ -364,6 +370,14 @@ func cmdAuto(args []string) {
 	}
 
 	sess := session.New()
+	if *authHeader != "" {
+		if name, val, ok := strings.Cut(*authHeader, ":"); ok {
+			sess.SetAuthHeader(strings.TrimSpace(name), strings.TrimSpace(val))
+		}
+	}
+	if *cookie != "" {
+		sess.SetAuthHeader("Cookie", *cookie)
+	}
 	svc := service.New(sess, *insecure)
 	ctx, cancel := signalContext()
 	defer cancel()
@@ -664,6 +678,128 @@ func wrap(s string, width int) string {
 		col += len(w)
 	}
 	return b.String()
+}
+
+// ---- openapi (spec-driven API scanning) ----
+
+func cmdOpenAPI(args []string) {
+	fs := newFlagSet("openapi")
+	base := fs.String("base", "", "base URL the API is served at, e.g. https://api.example.com")
+	authHeader := fs.String("auth-header", "", "an auth header to send, e.g. \"Authorization: Bearer <token>\"")
+	cookie := fs.String("cookie", "", "a Cookie header value to send for authenticated scanning")
+	insecure := fs.Bool("insecure", false, "skip upstream TLS verification")
+	fast := fs.Bool("fast", false, "skip wait-heavy checks")
+	asJSON := fs.Bool("json", false, "emit a JSON report")
+	reportFile := fs.String("report", "", "write an HTML report of all issues to this file")
+	yes := fs.Bool("yes", false, "skip the authorization confirmation")
+	pos := mustParse(fs, args)
+
+	specPath := firstArg(pos)
+	if specPath == "" {
+		log.Fatal("openapi: a spec file or URL is required")
+	}
+	if *base == "" {
+		log.Fatal("openapi: --base <url> is required (where the API is served)")
+	}
+	if u, err := url.Parse(*base); err != nil || !u.IsAbs() {
+		log.Fatalf("openapi: invalid --base %q", *base)
+	}
+
+	var data []byte
+	if strings.HasPrefix(specPath, "http://") || strings.HasPrefix(specPath, "https://") {
+		up := client.New(client.Options{InsecureSkipVerify: *insecure, FollowRedirects: true})
+		su, _ := url.Parse(specPath)
+		resp, err := up.Send(context.Background(), &httpmsg.Request{Method: "GET", URL: su, Scheme: su.Scheme, Host: su.Host, Header: defaultHeaders()})
+		if err != nil {
+			log.Fatalf("openapi: fetch spec: %v", err)
+		}
+		data = resp.Body
+	} else {
+		b, err := os.ReadFile(specPath)
+		if err != nil {
+			log.Fatalf("openapi: %v", err)
+		}
+		data = b
+	}
+
+	ops, err := openapi.Parse(data)
+	if err != nil {
+		log.Fatalf("openapi: %v", err)
+	}
+	if len(ops) == 0 {
+		log.Fatal("openapi: no operations found in the spec")
+	}
+	if !confirmAuthorized(*base, *yes) {
+		log.Fatal("openapi: aborted — authorization not confirmed")
+	}
+
+	sess := session.New()
+	if hu, err := url.Parse(*base); err == nil {
+		sess.Scope.Include(hu.Hostname(), "")
+	}
+	if *authHeader != "" {
+		if name, val, ok := strings.Cut(*authHeader, ":"); ok {
+			sess.SetAuthHeader(strings.TrimSpace(name), strings.TrimSpace(val))
+		}
+	}
+	if *cookie != "" {
+		sess.SetAuthHeader("Cookie", *cookie)
+	}
+	svc := service.New(sess, *insecure)
+	if !*fast {
+		svc.EnsureOAST()
+	}
+	ctx, cancel := signalContext()
+	defer cancel()
+
+	baseTrim := strings.TrimRight(*base, "/")
+	start := time.Now()
+	total := 0
+	for _, op := range ops {
+		if ctx.Err() != nil {
+			break
+		}
+		u, err := url.Parse(baseTrim + op.Path)
+		if err != nil {
+			continue
+		}
+		if len(op.Query) > 0 {
+			q := u.Query()
+			for k, v := range op.Query {
+				q.Set(k, v)
+			}
+			u.RawQuery = q.Encode()
+		}
+		h := defaultHeaders()
+		for k, v := range op.Headers {
+			h.Set(k, v)
+		}
+		if op.ContentType != "" {
+			h.Set("Content-Type", op.ContentType)
+		}
+		req := &httpmsg.Request{Method: op.Method, URL: u, Scheme: u.Scheme, Host: u.Host, Header: h, Body: []byte(op.Body)}
+		if _, err := svc.ScanRequestMode(ctx, req, *fast); err == nil {
+			total++
+		}
+	}
+
+	issues := sess.Issues()
+	if *asJSON {
+		rep := report.Build(version, baseTrim, start, issues)
+		_ = rep.WriteJSON(os.Stdout)
+	} else {
+		fmt.Printf("Scanned %d of %d documented operation(s) from the spec in %s.\n\n",
+			total, len(ops), time.Since(start).Round(time.Millisecond))
+		rep := report.Build(version, baseTrim, start, issues)
+		fmt.Printf("Found %d issue(s):\n\n", len(issues))
+		rep.WriteText(os.Stdout)
+	}
+	if *reportFile != "" {
+		if out, err := svc.ExportReport("html"); err == nil {
+			_ = os.WriteFile(*reportFile, []byte(out), 0o644)
+			fmt.Printf("\nwrote HTML report to %s\n", *reportFile)
+		}
+	}
 }
 
 // ---- learn (curriculum) ----
