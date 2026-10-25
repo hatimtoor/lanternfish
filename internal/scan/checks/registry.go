@@ -48,6 +48,7 @@ func Active() []scan.ActiveCheck {
 		CRLFInjection{},
 		CommandInjection{},
 		BlindCommandInjection{},
+		BlindSQLiOOB{},
 		BlindSSRF{},
 		LDAPInjection{},
 		XPathInjection{},
@@ -67,6 +68,7 @@ var slowActiveIDs = map[string]bool{
 	"blind-ssrf":            true,
 	"command-injection":     true, // time-based
 	"command-injection-oob": true, // out-of-band callback wait
+	"sqli-oob":              true, // out-of-band callback wait
 	"sqli-time-blind":       true,
 	"path-traversal-oracle": true, // many extra differential requests per point
 }
