@@ -41,6 +41,7 @@ func Passive() []scan.PassiveCheck {
 func Active() []scan.ActiveCheck {
 	base := []scan.ActiveCheck{
 		ReflectedXSS{},
+		StoredXSS{},
 		SQLiError{},
 		PathTraversal{},
 		PathTraversalOracle{},

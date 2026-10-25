@@ -354,6 +354,15 @@ var entries = map[string]Entry{
 		Fix:     "Serve pages and submit forms only over HTTPS.",
 		Refs:    []string{"https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html"},
 	},
+	"stored-xss": {
+		Title:   "Stored (second-order) cross-site scripting",
+		What:    "Input submitted in one request is persisted by the server and later served, unencoded, to anyone who views the affected page.",
+		Why:     "Unlike reflected XSS (which only affects a victim who follows a crafted link), stored XSS runs for every visitor of the page automatically, so it is higher impact — it can hijack sessions and spread.",
+		Confirm: "Submit a unique marker with breakout characters (e.g. '\"><marker>) through a field, then load the page where that content is displayed and check whether the marker appears unencoded in the HTML.",
+		Exploit: "In a lab, post a comment containing <script> or an onerror handler and confirm it executes when the comment list is viewed.",
+		Fix:     "Contextually HTML-encode stored data everywhere it is rendered, and validate input. Encoding must happen on output, at every sink.",
+		Refs:    []string{"https://portswigger.net/web-security/cross-site-scripting/stored", "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html"},
+	},
 	"cache-poisoning": {
 		Title:   "Web cache poisoning",
 		What:    "An attacker-controlled, unkeyed request header (e.g. X-Forwarded-Host) is reflected into a response that a shared cache stores, so the poisoned response is served to every later visitor.",
