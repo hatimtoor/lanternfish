@@ -254,6 +254,14 @@ and DOM-XSS, then report every issue by severity. Available from the CLI, the
 REST API (`POST /api/auto`), the MCP tool `auto_scan`, and the GUI's Autopilot
 tab.
 
+With `--browser` the headless crawl follows single-page-app routes (History API
+pushState, hash routes, framework `routerLink`/`data-href` attributes) and
+captured fetch/XHR endpoints, so client-rendered apps get mapped too. For sites
+behind a login, add `--login-url`/`--login-user`/`--login-pass` to log in
+through the browser first and scan authenticated — Lanternfish auto-detects the
+form fields, reuses the session cookies, and re-logs-in automatically if the
+session drops mid-scan. Use `--rate N` to scan a third-party target politely.
+
 ### Live auto-audit
 
 With a scope set, `lanternfish proxy --auto-audit --scope <host>` (or the Autopilot
@@ -290,7 +298,7 @@ easiest to most controlled:
 
 ### APIs and authenticated apps
 
-Point Lanternfish at an OpenAPI 3 or Swagger 2 spec to audit every documented
+Point Lanternfish at an OpenAPI 3 / Swagger 2 spec **or a Postman collection** to audit every documented
 endpoint — the modern-app equivalent of crawling:
 
 ```
@@ -420,6 +428,8 @@ Active (per insertion point — query and form-body parameters):
   (MSSQL/Oracle/MySQL/PostgreSQL).
 - `lfi` (CWE-98) — local file inclusion via php:// wrappers.
 - `nosql-injection` (CWE-943) — error-based NoSQL injection.
+- `stored-xss` (CWE-79) — second-order XSS: a canary submitted to a value vector
+  is persisted and returned unencoded on a later page load.
 
 The out-of-band checks (`*-oob`, `blind-ssrf`) fire payloads without waiting and
 are polled once per scan, so enabling them does not slow the scan per insertion
@@ -433,12 +443,16 @@ Request-level (once per request):
 - `xxe` (CWE-611) — XML external entity injection, in-band and out-of-band.
 - `host-header-injection` (CWE-644) — attacker host reflected in body/redirect.
 - `dangerous-http-methods` (CWE-650) — risky methods advertised via OPTIONS.
-- `graphql-introspection` (CWE-200) — schema introspection enabled.
+- `graphql-introspection` (CWE-200) — schema introspection enabled; also
+  `graphql-suggestions` (field "Did you mean" schema leak) and `graphql-batching`
+  (array queries that bypass per-request rate limits).
 - `content-discovery` (CWE-538) — exposed sensitive files (.git, .env, etc.).
 
 Passive highlights: `security-headers`, `csp-weakness` (a present-but-permissive
 Content-Security-Policy — `unsafe-inline`, wildcard script-src, missing
-object-src/base-uri), exposed secrets, vulnerable JS libraries, and more.
+object-src/base-uri), `cookie-security` (missing Secure/HttpOnly, `__Host-`/
+`__Secure-` prefix violations), `hsts-weak` (short max-age / missing
+includeSubDomains), exposed secrets, vulnerable JS libraries, and more.
 
 ## Architecture
 
