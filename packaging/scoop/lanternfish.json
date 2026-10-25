@@ -1,16 +1,16 @@
 {
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Free web security testing toolkit that brings hidden flaws to light and teaches as it goes. Authorized testing only.",
   "homepage": "https://github.com/hatimtoor/lanternfish",
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/hatimtoor/lanternfish/releases/download/v0.3.0/lanternfish_v0.3.0_windows_amd64.exe#/lanternfish.exe",
-      "hash": "a89c3be7a007515f9da9ab5e48686d99cac995397e0e6afd9e3aa5971c1f6936"
+      "url": "https://github.com/hatimtoor/lanternfish/releases/download/v0.4.0/lanternfish_v0.4.0_windows_amd64.exe#/lanternfish.exe",
+      "hash": "05167ea3f4060db1c8ea0d519c41141aa0c6dda0b81c5e1cfe7c50fd9db1362f"
     },
     "arm64": {
-      "url": "https://github.com/hatimtoor/lanternfish/releases/download/v0.3.0/lanternfish_v0.3.0_windows_arm64.exe#/lanternfish.exe",
-      "hash": "b0ff972a50944a7f0dbf55e0aa5313cba847e94957c76166905072f7cf6a32d9"
+      "url": "https://github.com/hatimtoor/lanternfish/releases/download/v0.4.0/lanternfish_v0.4.0_windows_arm64.exe#/lanternfish.exe",
+      "hash": "8d41451d7bcaeb8d56fccf1db82c923d75d08227261332e4201811c6d5dda368"
     }
   },
   "bin": "lanternfish.exe",
