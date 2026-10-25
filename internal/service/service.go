@@ -60,6 +60,52 @@ func (s *Service) scanCtx(ctx context.Context) context.Context {
 	return ctx
 }
 
+// interactshFromEnv builds an Interactsh client when LANTERNFISH_OAST selects
+// it. Value forms: "interactsh" (auto-pick a public server) or
+// "interactsh:oast.live" (a specific server). Returns false otherwise.
+func interactshFromEnv() (scan.Interactor, bool) {
+	v := strings.TrimSpace(os.Getenv("LANTERNFISH_OAST"))
+	if !strings.HasPrefix(v, "interactsh") {
+		return nil, false
+	}
+	server := strings.TrimPrefix(v, "interactsh")
+	server = strings.TrimPrefix(server, ":")
+	var (
+		c   *oast.Interactsh
+		err error
+	)
+	if server == "" {
+		c, err = oast.NewInteractshAuto()
+	} else {
+		c, err = oast.NewInteractsh(server)
+	}
+	if err != nil {
+		return nil, false
+	}
+	return c, true
+}
+
+// UseInteractsh switches the out-of-band provider to a public Interactsh server
+// (empty server = auto-pick). Used by the --oob interactsh CLI flag.
+func (s *Service) UseInteractsh(server string) error {
+	var (
+		c   *oast.Interactsh
+		err error
+	)
+	if server == "" {
+		c, err = oast.NewInteractshAuto()
+	} else {
+		c, err = oast.NewInteractsh(server)
+	}
+	if err != nil {
+		return err
+	}
+	s.oastMu.Lock()
+	s.interactor = c
+	s.oastMu.Unlock()
+	return nil
+}
+
 // SetInteractor sets the out-of-band provider the scanner uses (e.g. a hosted
 // collaborator). Overrides any local listener for new scans.
 func (s *Service) SetInteractor(i scan.Interactor) {
@@ -112,6 +158,16 @@ func (s *Service) EnsureOAST() {
 	// targets that cannot call back to this machine.
 	if r, ok := oast.RemoteFromEnv(); ok {
 		s.interactor = r
+		return
+	}
+	// Zero-config public OOB: when requested (LANTERNFISH_OAST=interactsh, or a
+	// specific server like interactsh:oast.live), register with a public
+	// Interactsh server so blind checks fire against *remote* targets that can
+	// never reach this machine — no DNS/infra setup required. This is the path
+	// bug-bounty and research use; learners on their own box can omit it and use
+	// the local listener below.
+	if c, ok := interactshFromEnv(); ok {
+		s.interactor = c
 		return
 	}
 	o := oast.New("")

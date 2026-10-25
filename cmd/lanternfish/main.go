@@ -268,6 +268,25 @@ func cmdMCP(args []string) {
 
 // ---- scan ----
 
+// parseOOB interprets the --oob flag value. It returns the provider name, an
+// optional explicit interactsh server, and whether interactsh was selected.
+func parseOOB(v string) (provider, server string, interactsh bool) {
+	v = strings.TrimSpace(v)
+	if strings.HasPrefix(v, "interactsh") {
+		s := strings.TrimPrefix(strings.TrimPrefix(v, "interactsh"), ":")
+		return "interactsh", s, true
+	}
+	return "local", "", false
+}
+
+// newInteractsh builds a public Interactsh client (auto-pick when server == "").
+func newInteractsh(server string) (*oast.Interactsh, error) {
+	if server == "" {
+		return oast.NewInteractshAuto()
+	}
+	return oast.NewInteractsh(server)
+}
+
 func cmdScan(args []string) {
 	fs := newFlagSet("scan")
 	insecure := fs.Bool("insecure", false, "skip upstream TLS verification")
@@ -275,6 +294,7 @@ func cmdScan(args []string) {
 	conc := fs.Int("concurrency", 10, "max concurrent active probes")
 	fast := fs.Bool("fast", false, "skip wait-heavy checks (out-of-band + time-based inference)")
 	http3 := fs.Bool("http3", false, "speak HTTP/3 (QUIC) to the target")
+	oob := fs.String("oob", "local", "out-of-band provider: local (loopback listener) or interactsh[:server] (public, zero-setup, works against remote targets)")
 	yes := fs.Bool("yes", false, "skip the authorization confirmation (for non-interactive use)")
 	failOn := fs.String("fail-on", "", "exit non-zero if an issue of this severity or higher is found (low|medium|high|critical)")
 	pos := mustParse(fs, args)
@@ -304,15 +324,28 @@ func cmdScan(args []string) {
 	ctx, cancel := signalContext()
 	defer cancel()
 
-	// Full mode starts a loopback out-of-band listener so blind checks (SSRF,
-	// etc.) can observe callbacks. Fast mode skips it along with those checks.
+	// Full mode attaches an out-of-band provider so blind checks (SSRF, blind
+	// SQLi/cmdi, XXE) can observe callbacks. Fast mode skips it along with those
+	// checks. "local" is a loopback listener (fine for a target that can reach
+	// this machine, e.g. your own box); "interactsh" uses a public server so
+	// callbacks fire from remote third-party targets with no setup.
 	if !*fast {
-		o := oast.New("")
-		if _, err := o.Start("127.0.0.1:0"); err == nil {
-			defer o.Close()
-			ctx = scan.WithInteractor(ctx, o)
+		if prov, server, isIsh := parseOOB(*oob); isIsh {
+			if c, err := newInteractsh(server); err == nil {
+				ctx = scan.WithInteractor(ctx, c)
+				log.Printf("out-of-band: using public Interactsh server %q (callbacks for blind findings route through it)", c.Server())
+			} else {
+				log.Printf("warning: interactsh unavailable (%v); blind checks limited", err)
+			}
 		} else {
-			log.Printf("warning: out-of-band listener unavailable, blind checks limited: %v", err)
+			_ = prov
+			o := oast.New("")
+			if _, err := o.Start("127.0.0.1:0"); err == nil {
+				defer o.Close()
+				ctx = scan.WithInteractor(ctx, o)
+			} else {
+				log.Printf("warning: out-of-band listener unavailable, blind checks limited: %v", err)
+			}
 		}
 	}
 
