@@ -25,6 +25,18 @@ jobs:
       - name: Test
         run: go test ./...
 
+  race:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test with the race detector
+        # Guards the concurrent scan engine (OOB probe batching, progress
+        # counter), the request throttle, the proxy, and the OAST client.
+        run: go test -race -timeout 25m ./...
+
   benchmark:
     runs-on: ubuntu-latest
     steps:
