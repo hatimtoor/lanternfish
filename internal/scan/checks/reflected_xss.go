@@ -3,11 +3,14 @@ package checks
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"lanternfish/internal/httpmsg"
 	"lanternfish/internal/scan"
 )
+
+var scriptBlock = regexp.MustCompile(`(?is)<script\b[^>]*>(.*?)</script>`)
 
 // ReflectedXSS probes an insertion point by injecting a unique marker wrapped
 // in characters significant to HTML. If the marker is reflected without
@@ -28,7 +31,8 @@ func (ReflectedXSS) Active(ctx context.Context, s scan.Sender, base *httpmsg.Req
 		return nil
 	}
 	if !strings.Contains(resp.ContentType(), "html") {
-		return nil
+		// Not HTML, but a JavaScript response can still reflect into a string.
+		return (ReflectedXSS{}).jsContext(ctx, s, base, p)
 	}
 	body := resp.BodyString()
 
@@ -42,7 +46,8 @@ func (ReflectedXSS) Active(ctx context.Context, s scan.Sender, base *httpmsg.Req
 	open := "<" + marker
 	needle := fmt.Sprintf("<%s>", marker)
 	if !strings.Contains(body, open) {
-		return nil
+		// Tag injection didn't survive; try the JavaScript-string context.
+		return (ReflectedXSS{}).jsContext(ctx, s, base, p)
 	}
 
 	conf := scan.ConfidenceFirm
@@ -87,4 +92,56 @@ func excerpt(body, needle string) string {
 		end = len(body)
 	}
 	return "..." + body[start:end] + "..."
+}
+
+// jsContext detects reflection inside a JavaScript string where the injected
+// string-terminating quote survives unescaped — the classic XSS case the
+// tag-based probe above misses when "<" is encoded but quotes are not. It fires
+// only when the quote-breaking marker lands inside a <script> block (or a
+// JavaScript response body), so a page that escapes or encodes the quote never
+// matches: zero false positives.
+func (ReflectedXSS) jsContext(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+	m := randMarker("ajs")
+	// Each payload ends the string with its own quote style and starts a new
+	// statement; the needle is the part that only appears if the quote survived.
+	for _, q := range []string{"'", "\"", "`"} {
+		payload := m + q + ";lf=1//"
+		needle := m + q + ";lf=1"
+		resp, err := s.Send(ctx, p.Mutate(payload))
+		if err != nil || resp == nil {
+			continue
+		}
+		ct := resp.ContentType()
+		body := resp.BodyString()
+		var inScript bool
+		switch {
+		case strings.Contains(ct, "javascript"), strings.Contains(ct, "ecmascript"):
+			inScript = strings.Contains(body, needle)
+		case strings.Contains(ct, "html"):
+			inScript = insideScript(body, needle)
+		}
+		if inScript {
+			return []*scan.Issue{{
+				Check: "reflected-xss", Name: "Reflected cross-site scripting (JavaScript string context)",
+				URL: base.AbsoluteURL().String(), Param: p.Name,
+				Severity: scan.SeverityHigh, Confidence: scan.ConfidenceFirm,
+				Detail:      fmt.Sprintf("Input in parameter %q is reflected inside a <script> block with the string-terminating quote (%s) left unescaped (injected sequence %q returned verbatim). An attacker can break out of the JavaScript string and execute arbitrary script.", p.Name, q, needle),
+				Remediation: "Encode data placed into JavaScript contexts (e.g. JSON-encode and HTML-encode), or avoid reflecting input into inline script. Prefer data attributes read by external scripts.",
+				Evidence:    excerpt(body, needle),
+				CWE:         "CWE-79",
+			}}
+		}
+	}
+	return nil
+}
+
+// insideScript reports whether needle appears within any <script>...</script>
+// block of body.
+func insideScript(body, needle string) bool {
+	for _, mm := range scriptBlock.FindAllStringSubmatch(body, -1) {
+		if strings.Contains(mm[1], needle) {
+			return true
+		}
+	}
+	return false
 }
