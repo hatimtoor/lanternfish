@@ -818,7 +818,7 @@ func cmdOpenAPI(args []string) {
 		data = b
 	}
 
-	ops, err := openapi.Parse(data)
+	ops, err := openapi.ParseAny(data)
 	if err != nil {
 		log.Fatalf("openapi: %v", err)
 	}
