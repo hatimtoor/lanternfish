@@ -296,6 +296,7 @@ func cmdScan(args []string) {
 	fast := fs.Bool("fast", false, "skip wait-heavy checks (out-of-band + time-based inference)")
 	http3 := fs.Bool("http3", false, "speak HTTP/3 (QUIC) to the target")
 	oob := fs.String("oob", "local", "out-of-band provider: local (loopback listener) or interactsh[:server] (public, zero-setup, works against remote targets)")
+	rate := fs.Float64("rate", 0, "max requests per second across the whole scan (0 = unlimited; use it to scan third-party targets politely)")
 	yes := fs.Bool("yes", false, "skip the authorization confirmation (for non-interactive use)")
 	failOn := fs.String("fail-on", "", "exit non-zero if an issue of this severity or higher is found (low|medium|high|critical)")
 	pos := mustParse(fs, args)
@@ -312,7 +313,8 @@ func cmdScan(args []string) {
 		log.Fatal("scan: aborted — authorization not confirmed")
 	}
 
-	up := client.New(client.Options{InsecureSkipVerify: *insecure, FollowRedirects: false, HTTP3: *http3})
+	var sender scan.Sender = client.New(client.Options{InsecureSkipVerify: *insecure, FollowRedirects: false, HTTP3: *http3})
+	sender = scan.NewThrottle(sender, *rate)
 	active := checks.Active()
 	if *fast {
 		active = checks.ActiveFast()
@@ -376,13 +378,13 @@ func cmdScan(args []string) {
 	}
 
 	// Seed with a baseline fetch so passive checks see the landing response.
-	if resp, err := up.Send(ctx, base); err == nil {
+	if resp, err := sender.Send(ctx, base); err == nil {
 		eng.Passive(&httpmsg.Transaction{Request: base, Response: resp}, col)
 	} else {
 		log.Printf("warning: baseline request failed: %v", err)
 	}
 
-	eng.Audit(ctx, up, base, col)
+	eng.Audit(ctx, sender, base, col)
 
 	rep := report.Build(version, target, started, col.Issues())
 	if *asJSON {
