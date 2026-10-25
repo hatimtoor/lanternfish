@@ -96,5 +96,6 @@ func Request() []scan.RequestCheck {
 		DangerousMethods{},
 		GraphQLIntrospection{},
 		ContentDiscovery{},
+		CachePoisoning{},
 	}
 }

@@ -354,6 +354,15 @@ var entries = map[string]Entry{
 		Fix:     "Serve pages and submit forms only over HTTPS.",
 		Refs:    []string{"https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html"},
 	},
+	"cache-poisoning": {
+		Title:   "Web cache poisoning",
+		What:    "An attacker-controlled, unkeyed request header (e.g. X-Forwarded-Host) is reflected into a response that a shared cache stores, so the poisoned response is served to every later visitor.",
+		Why:     "One request can hijack a resource host or link for all users of a cached page — turning a reflection that would only affect the attacker into a stored, wide-reach attack (XSS, redirect, resource hijack).",
+		Confirm: "Send the request with an unkeyed header such as X-Forwarded-Host: your-marker and check whether the marker is reflected in the response and whether the response is cacheable (Cache-Control: public/max-age, an Age header, or an X-Cache/CF-Cache-Status header). Re-request without the header to see if the poisoned value persists from cache.",
+		Exploit: "In a lab, poison a cached page so its script/resource host points at a server you control, then load the page as a victim and observe the hijacked resource.",
+		Fix:     "Never build absolute URLs or resource hosts from untrusted headers. If a header must influence the response, include it in the cache key, or strip/normalise it at the edge.",
+		Refs:    []string{"https://portswigger.net/web-security/web-cache-poisoning", "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html"},
+	},
 	"cacheable-sensitive": {
 		Title:   "Sensitive response is cacheable",
 		What:    "A response with sensitive data lacks no-store/no-cache directives.",
