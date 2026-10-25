@@ -296,6 +296,23 @@ easiest to most controlled:
   #   LANTERNFISH_COLLABORATOR_SECRET=<printed secret>
   ```
 
+### Intrusive checks (opt-in)
+
+Some checks are too aggressive to run by default. `--intrusive` (on `scan` and
+`auto`) enables them for authorized targets only:
+
+- **HTTP request smuggling** (`request-smuggling`, CWE-444) — a raw-socket client
+  sends CL.TE / TE.CL probes with Transfer-Encoding obfuscation variants and
+  detects a front-end/back-end desync by timing. Detection is timing-only: a
+  probe stalls the connection Lanternfish opened and is **never** a request
+  appended to another user's stream, so even this intrusive check does not
+  poison other clients. It still sends malformed requests and ties up back-end
+  connections, which is why it is opt-in.
+
+```
+lanternfish scan "https://target.example/" --intrusive
+```
+
 ### APIs and authenticated apps
 
 Point Lanternfish at an OpenAPI 3 / Swagger 2 spec **or a Postman collection** to audit every documented
@@ -447,6 +464,8 @@ Request-level (once per request):
   `graphql-suggestions` (field "Did you mean" schema leak) and `graphql-batching`
   (array queries that bypass per-request rate limits).
 - `content-discovery` (CWE-538) — exposed sensitive files (.git, .env, etc.).
+- `request-smuggling` (CWE-444) — HTTP/1.1 desync (CL.TE/TE.CL + TE obfuscation),
+  raw-socket timing detection. **Opt-in** via `--intrusive`.
 
 Passive highlights: `security-headers`, `csp-weakness` (a present-but-permissive
 Content-Security-Policy — `unsafe-inline`, wildcard script-src, missing

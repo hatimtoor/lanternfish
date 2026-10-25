@@ -298,6 +298,7 @@ func cmdScan(args []string) {
 	http3 := fs.Bool("http3", false, "speak HTTP/3 (QUIC) to the target")
 	oob := fs.String("oob", "local", "out-of-band provider: local (loopback listener) or interactsh[:server] (public, zero-setup, works against remote targets)")
 	rate := fs.Float64("rate", 0, "max requests per second across the whole scan (0 = unlimited; use it to scan third-party targets politely)")
+	intrusive := fs.Bool("intrusive", false, "enable intrusive checks (HTTP request smuggling): sends malformed requests and ties up back-end connections — opt-in, authorized targets only")
 	yes := fs.Bool("yes", false, "skip the authorization confirmation (for non-interactive use)")
 	failOn := fs.String("fail-on", "", "exit non-zero if an issue of this severity or higher is found (low|medium|high|critical)")
 	pos := mustParse(fs, args)
@@ -321,6 +322,9 @@ func cmdScan(args []string) {
 		active = checks.ActiveFast()
 	}
 	eng := scan.NewEngine(checks.Passive(), active).WithRequestChecks(checks.Request())
+	if *intrusive {
+		eng.AddRequestChecks(checks.RequestSmuggling{Insecure: *insecure})
+	}
 	eng.Concurrency = *conc
 	col := scan.NewCollector()
 	started := time.Now()
@@ -416,6 +420,7 @@ func cmdAuto(args []string) {
 	cookie := fs.String("cookie", "", "a Cookie header value to send for authenticated scanning")
 	oob := fs.String("oob", "local", "out-of-band provider: local (loopback listener) or interactsh[:server] (public, zero-setup, works against remote targets)")
 	rate := fs.Float64("rate", 0, "max requests per second (0 = unlimited; use it to scan third-party targets politely)")
+	intrusive := fs.Bool("intrusive", false, "enable intrusive checks (HTTP request smuggling) — opt-in, authorized targets only")
 	loginURL := fs.String("login-url", "", "log in through a headless browser at this URL before scanning (authenticated scan)")
 	loginUser := fs.String("login-user", "", "username for --login-url")
 	loginPass := fs.String("login-pass", "", "password for --login-url")
@@ -447,6 +452,9 @@ func cmdAuto(args []string) {
 	}
 	svc := service.New(sess, *insecure)
 	svc.SetRateLimit(*rate)
+	if *intrusive {
+		svc.EnableIntrusive(*insecure)
+	}
 	// Authenticated scan: log in through a headless browser first and reuse the
 	// session cookies for the whole run.
 	if *loginURL != "" {

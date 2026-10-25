@@ -354,6 +354,15 @@ var entries = map[string]Entry{
 		Fix:     "Serve pages and submit forms only over HTTPS.",
 		Refs:    []string{"https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html"},
 	},
+	"request-smuggling": {
+		Title:   "HTTP request smuggling (desync)",
+		What:    "A front-end and back-end server disagree on where one HTTP/1.1 request ends (because of conflicting Content-Length and Transfer-Encoding handling), so part of one request is interpreted as the start of the next.",
+		Why:     "An attacker can prepend bytes to another user's request: poisoning responses, bypassing front-end security controls, capturing other users' requests, or hijacking sessions. Impact is typically critical.",
+		Confirm: "Send a request with both Content-Length and Transfer-Encoding (or an obfuscated Transfer-Encoding) crafted so one server waits for a body that never arrives; a hang relative to a normal request indicates a desync (the safe, timing-based test). Confirm carefully — exploit confirmation can affect other users.",
+		Exploit: "Only on a system you are authorised to test: follow PortSwigger's methodology to prove the desync by smuggling a benign prefix and observing it affect your own follow-up request.",
+		Fix:     "Normalise request parsing end to end: reject requests bearing both Content-Length and Transfer-Encoding, forbid obfuscated Transfer-Encoding, and prefer HTTP/2 to the back-end.",
+		Refs:    []string{"https://portswigger.net/web-security/request-smuggling"},
+	},
 	"stored-xss": {
 		Title:   "Stored (second-order) cross-site scripting",
 		What:    "Input submitted in one request is persisted by the server and later served, unencoded, to anyone who views the affected page.",

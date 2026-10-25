@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -151,6 +151,14 @@ func (s *Service) BrowserLogin(c browser.Creds) (int, error) {
 // reauthCooldown bounds how often a lost session triggers a re-login, so a
 // genuinely unauthenticated target cannot drive an endless re-auth loop.
 const reauthCooldown = 20 * time.Second
+
+// EnableIntrusive registers the opt-in intrusive checks (HTTP request
+// smuggling) on both scan engines. Call it only when the operator explicitly
+// opts in; these checks send malformed requests and tie up connections.
+func (s *Service) EnableIntrusive(insecure bool) {
+	s.eng.AddRequestChecks(checks.RequestSmuggling{Insecure: insecure})
+	s.engFast.AddRequestChecks(checks.RequestSmuggling{Insecure: insecure})
+}
 
 // SetReauth registers a function that re-establishes the session (e.g. a fresh
 // browser login or macro run). When a scan response looks logged-out, the

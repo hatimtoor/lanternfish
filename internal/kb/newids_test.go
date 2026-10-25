@@ -9,7 +9,7 @@ func TestCheckIDsResolveToLessons(t *testing.T) {
 	ids := []string{
 		"csp-weakness", "path-traversal-oracle", "sqli-oob",
 		"command-injection-oob", "command-injection-inband", "sqli-time-blind", "ssrf",
-		"sqli-error", "xpath-injection", "ldap-injection", "reflected-xss", "cache-poisoning", "stored-xss", "graphql-suggestions", "graphql-batching", "cookie-security", "hsts-weak",
+		"sqli-error", "xpath-injection", "ldap-injection", "reflected-xss", "cache-poisoning", "stored-xss", "graphql-suggestions", "graphql-batching", "cookie-security", "hsts-weak", "request-smuggling",
 	}
 	for _, id := range ids {
 		if _, ok := Lookup(id); !ok {

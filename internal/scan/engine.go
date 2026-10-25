@@ -64,6 +64,10 @@ func (e *Engine) AddPassive(c ...PassiveCheck) { e.passive = append(e.passive, c
 // AddActive registers an extra active check (e.g. from an extension).
 func (e *Engine) AddActive(c ...ActiveCheck) { e.active = append(e.active, c...) }
 
+// AddRequestChecks registers extra request-level checks (e.g. opt-in intrusive
+// checks enabled at the CLI).
+func (e *Engine) AddRequestChecks(c ...RequestCheck) { e.request = append(e.request, c...) }
+
 // Passive runs all passive checks over one transaction.
 func (e *Engine) Passive(tx *httpmsg.Transaction, col *Collector) {
 	for _, c := range e.passive {
