@@ -371,6 +371,9 @@ func (s *Service) BrowserCrawl(ctx context.Context, target string) (*browser.Res
 	for _, x := range res.XHR {
 		fetch(x)
 	}
+	for _, r := range res.Routes {
+		fetch(r)
+	}
 	return res, nil
 }
 

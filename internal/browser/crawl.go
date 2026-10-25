@@ -13,10 +13,11 @@ import (
 
 // Result is what a headless crawl of one page discovered.
 type Result struct {
-	URL   string   `json:"url"`
-	Links []string `json:"links"`
-	Forms []Form   `json:"forms"`
-	XHR   []string `json:"xhr"`
+	URL    string   `json:"url"`
+	Links  []string `json:"links"`
+	Forms  []Form   `json:"forms"`
+	XHR    []string `json:"xhr"`
+	Routes []string `json:"routes"` // single-page-app routes (History API + route attributes)
 }
 
 // Form is a discovered form.
@@ -25,22 +26,40 @@ type Form struct {
 	Method string `json:"method"`
 }
 
-// hookScript instruments fetch/XHR so dynamically-issued requests are captured.
+// hookScript instruments fetch/XHR so dynamically-issued requests are captured,
+// and hooks the History API so single-page-app route changes (router.push,
+// pushState/replaceState) are recorded as navigable endpoints.
 const hookScript = `
 window.__lanternfish_xhr = [];
+window.__lanternfish_routes = [];
 (function(){
   var push=function(u){try{window.__lanternfish_xhr.push(new URL(u, location.href).href)}catch(e){}};
   var of=window.fetch; if(of){window.fetch=function(i){try{push(typeof i==='string'?i:(i&&i.url))}catch(e){} return of.apply(this,arguments)}}
   var oo=XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open=function(m,u){push(u); return oo.apply(this,arguments)};
+  var route=function(u){try{window.__lanternfish_routes.push(new URL(u, location.href).href)}catch(e){}};
+  var ps=history.pushState; history.pushState=function(s,t,u){try{if(u)route(u)}catch(e){} return ps.apply(this,arguments)};
+  var rs=history.replaceState; history.replaceState=function(s,t,u){try{if(u)route(u)}catch(e){} return rs.apply(this,arguments)};
+  window.addEventListener('hashchange',function(){route(location.href)});
 })();`
 
-// collectScript returns a JSON string of links/forms/xhr from the loaded page.
+// collectScript returns a JSON string of links/forms/xhr/routes from the loaded
+// page. Beyond static anchors it gathers hash-based routes and single-page-app
+// route attributes (Angular routerLink, data-href, etc.) so client-rendered
+// navigation targets are discovered, not just server-rendered links.
 const collectScript = `(function(){
   var abs=function(h){try{return new URL(h, location.href).href}catch(e){return null}};
-  var links=[].slice.call(document.querySelectorAll('a[href]')).map(function(a){return abs(a.getAttribute('href'))}).filter(Boolean);
+  var seen={}, links=[], routes=[];
+  var add=function(arr,v){if(v&&!seen[v]){seen[v]=1;arr.push(v)}};
+  [].slice.call(document.querySelectorAll('a[href]')).forEach(function(a){add(links, abs(a.getAttribute('href')))});
+  var sel='[routerLink],[routerlink],[data-href],[ng-href],[data-route],[data-link],[data-url]';
+  [].slice.call(document.querySelectorAll(sel)).forEach(function(e){
+    var h=e.getAttribute('routerLink')||e.getAttribute('routerlink')||e.getAttribute('data-href')||e.getAttribute('ng-href')||e.getAttribute('data-route')||e.getAttribute('data-link')||e.getAttribute('data-url');
+    add(routes, abs(h));
+  });
+  (window.__lanternfish_routes||[]).forEach(function(r){add(routes, abs(r))});
   var forms=[].slice.call(document.forms).map(function(f){return {action:abs(f.getAttribute('action')||location.href), method:(f.method||'GET').toUpperCase()}});
   var xhr=window.__lanternfish_xhr||[];
-  return JSON.stringify({links:links, forms:forms, xhr:xhr});
+  return JSON.stringify({links:links, forms:forms, xhr:xhr, routes:routes});
 })()`
 
 // Available reports whether a usable Chromium-family browser was found.
