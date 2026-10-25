@@ -232,7 +232,10 @@ lanternfish scan "https://target.example/search?q=test" --json --fail-on high
 Runs every bundled check against each insertion point, emits findings as text
 or JSON, and can set a non-zero exit code when an issue meets a severity
 threshold (for CI gating). `--fast` skips the wait-heavy checks (out-of-band
-and time-based) for a quick pass.
+and time-based) for a quick pass. `--rate N` caps requests per second so you can
+scan a third-party target politely, and `--oob interactsh` turns on zero-setup
+out-of-band detection (see below). A live `scanning: N/M probes` line reports
+progress.
 
 Insertion points mirror Burp's taxonomy: URL query and form-body parameters,
 JSON body values, cookies, selected request headers, URL path segments, XML
@@ -258,19 +261,32 @@ tab's toggle / `set_live_audit`) actively scans each in-scope request as you
 browse it through the proxy, so browsing a target drives the scanner. It
 refuses to run without a scope, so it can never audit arbitrary sites.
 
-### Hosted collaborator
+### Out-of-band detection (blind vulnerabilities)
 
-Blind checks need the target to call back somewhere. By default Lanternfish uses a
-local listener, which only works when the target can reach your machine. For
-real targets, run a reachable collaborator and point scanners at it:
+Blind bugs — blind SSRF, blind SQL/command injection, out-of-band XXE — give no
+hint in the HTTP response. The only way to catch them is to make the target call
+back to a server you control. Lanternfish gives you three ways to do that, from
+easiest to most controlled:
 
-```
-lanternfish collaborator --addr :80 --control :8085 --domain http://oast.example.com
-# then, on the scanner side:
-#   LANTERNFISH_COLLABORATOR_URL=http://oast.example.com
-#   LANTERNFISH_COLLABORATOR_CONTROL=http://oast.example.com:8085
-#   LANTERNFISH_COLLABORATOR_SECRET=<printed secret>
-```
+- **Public Interactsh (zero setup, works on remote targets).** `--oob interactsh`
+  (on `scan` and `auto`, or `LANTERNFISH_OAST=interactsh`) registers with a free
+  public Interactsh server — the same out-of-band service the wider community
+  uses — so callbacks from *someone else's* system are captured and polled over
+  HTTPS, encrypted to a key only you hold. No DNS, no domain, no server to run.
+  This is the path for bug-bounty and research work. (Callbacks transit the
+  public server; use a private collaborator below if that matters to you.)
+- **Local listener (default; for your own box).** With no flag, Lanternfish runs a
+  loopback listener. Perfect when you are testing an app on your own machine
+  that can reach you, and it keeps everything local.
+- **Your own hosted collaborator.** Run a reachable server you fully control:
+
+  ```
+  lanternfish collaborator --addr :80 --control :8085 --domain http://oast.example.com
+  # then, on the scanner side:
+  #   LANTERNFISH_COLLABORATOR_URL=http://oast.example.com
+  #   LANTERNFISH_COLLABORATOR_CONTROL=http://oast.example.com:8085
+  #   LANTERNFISH_COLLABORATOR_SECRET=<printed secret>
+  ```
 
 ### APIs and authenticated apps
 
@@ -377,29 +393,52 @@ About **205 distinct registered checks** in total, spanning the OWASP
 vulnerability classes plus secret and technology detection.
 
 Active (per insertion point — query and form-body parameters):
-- `reflected-xss` (CWE-79) — marker reflected unencoded into HTML.
+- `reflected-xss` (CWE-79) — marker reflected unencoded into HTML, including the
+  JavaScript-string context (quote survives inside a `<script>` block).
 - `sqli-error` (CWE-89) — database error provoked by a syntax-breaking value,
   compared against a baseline.
-- `path-traversal` (CWE-22) — traversal sequences returning known-file content.
+- `path-traversal` (CWE-22) — traversal sequences returning known-file content
+  (raw or HTML-entity-encoded).
+- `path-traversal-oracle` (CWE-22) — file-existence oracle for sinks that report
+  whether a path exists/opens but never return its content (directory target, so
+  it never writes to the filesystem).
 - `open-redirect` (CWE-601) — attacker-controlled `Location` redirect target.
 - `ssti` (CWE-1336) — template expression evaluated server-side.
 - `crlf-injection` (CWE-113) — CRLF in a value injects a response header.
 - `command-injection` (CWE-78) — time-based blind OS command injection.
+- `command-injection-inband` (CWE-78) — shell/`cmd.exe` arithmetic evaluation.
+- `command-injection-oob` (CWE-78) — out-of-band callback confirms blind OS
+  command injection.
+- `ssrf` (CWE-918) — in-band SSRF: cloud instance-metadata (incl. AWS IAM creds)
+  or local files fetched and reflected.
 - `blind-ssrf` (CWE-918) — out-of-band callback confirms server-side request
-  forgery (needs the OAST listener).
-- `ldap-injection` (CWE-90), `xpath-injection` (CWE-643) — error-based.
+  forgery.
+- `ldap-injection` (CWE-90), `xpath-injection` (CWE-643) — error-based and
+  boolean/differential.
 - `sqli-boolean-blind` / `sqli-time-blind` (CWE-89) — blind SQL injection.
+- `sqli-oob` (CWE-89) — out-of-band blind SQLi via DNS/UNC exfiltration
+  (MSSQL/Oracle/MySQL/PostgreSQL).
 - `lfi` (CWE-98) — local file inclusion via php:// wrappers.
-- `command-injection-inband` (CWE-78) — shell arithmetic evaluation.
 - `nosql-injection` (CWE-943) — error-based NoSQL injection.
 
+The out-of-band checks (`*-oob`, `blind-ssrf`) fire payloads without waiting and
+are polled once per scan, so enabling them does not slow the scan per insertion
+point. Point them at a remote target with `--oob interactsh`.
+
 Request-level (once per request):
-- `cors-misconfig` (CWE-942) — arbitrary/wildcard origin reflected.
+- `cors-misconfig` (CWE-942) — reflected/wildcard origin, the `null` origin, and
+  allow-list bypasses (trusted subdomain, prefix, suffix).
+- `cache-poisoning` (CWE-444) — unkeyed header (X-Forwarded-Host, etc.) reflected
+  into a cacheable response.
 - `xxe` (CWE-611) — XML external entity injection, in-band and out-of-band.
 - `host-header-injection` (CWE-644) — attacker host reflected in body/redirect.
 - `dangerous-http-methods` (CWE-650) — risky methods advertised via OPTIONS.
 - `graphql-introspection` (CWE-200) — schema introspection enabled.
 - `content-discovery` (CWE-538) — exposed sensitive files (.git, .env, etc.).
+
+Passive highlights: `security-headers`, `csp-weakness` (a present-but-permissive
+Content-Security-Policy — `unsafe-inline`, wildcard script-src, missing
+object-src/base-uri), exposed secrets, vulnerable JS libraries, and more.
 
 ## Architecture
 
