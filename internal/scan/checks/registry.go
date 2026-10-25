@@ -20,6 +20,8 @@ func Passive() []scan.PassiveCheck {
 		SessionTokenInURL{},
 		BannerDisclosure{},
 		CookieSameSite{},
+		CookieHardening{},
+		WeakHSTS{},
 		SourceMapDisclosure{},
 		SensitiveComment{},
 		CreditCardDisclosure{},

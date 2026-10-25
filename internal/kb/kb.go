@@ -58,5 +58,7 @@ var prefixes = []struct{ prefix, key string }{
 	{"csp-", "csp-weakness"},
 	{"ssrf", "blind-ssrf"},
 	{"graphql", "graphql-introspection"},
+	{"cookie-", "cookie-samesite"},
+	{"hsts", "security-headers"},
 	{"ext:", "exposed-secrets"},
 }
