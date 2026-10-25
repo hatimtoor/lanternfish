@@ -18,20 +18,80 @@ func (CORSMisconfig) ID() string { return "cors-misconfig" }
 
 const evilOrigin = "https://lanternfish-evil.example"
 
-func (CORSMisconfig) Request(ctx context.Context, s scan.Sender, base *httpmsg.Request) []*scan.Issue {
+// corsOrigin sends one Origin header and reports whether the response reflected
+// that exact origin in ACAO and whether credentials are allowed.
+func corsOrigin(ctx context.Context, s scan.Sender, base *httpmsg.Request, origin string) (acao string, reflected, creds bool) {
 	probe := base.Clone()
-	probe.Header.Set("Origin", evilOrigin)
+	probe.Header.Set("Origin", origin)
 	resp, err := s.Send(ctx, probe)
 	if err != nil || resp == nil {
-		return nil
+		return "", false, false
 	}
-	acao := resp.Header.Get("Access-Control-Allow-Origin")
+	acao = resp.Header.Get("Access-Control-Allow-Origin")
+	creds = strings.EqualFold(resp.Header.Get("Access-Control-Allow-Credentials"), "true")
+	return acao, acao == origin, creds
+}
+
+func (CORSMisconfig) Request(ctx context.Context, s scan.Sender, base *httpmsg.Request) []*scan.Issue {
+	acaoFor := base.AbsoluteURL().String()
+	host := base.AbsoluteURL().Hostname()
+
+	// 1) Bypasses that defeat a naive origin check, derived from the real host.
+	//    If the server reflects one of these attacker-controllable origins, its
+	//    allow-list logic is broken in a specific, exploitable way.
+	if host != "" {
+		bypasses := []struct{ origin, how string }{
+			{"https://lanternfish-evil." + host, "a subdomain of the target (exploitable via any subdomain XSS or takeover)"},
+			{"https://" + host + ".lanternfish-evil.example", "a prefix match (the check accepts any origin that starts with the trusted host)"},
+			{"https://lanternfish-evil-" + host, "a suffix match (the check accepts any origin that ends with the trusted host)"},
+		}
+		for _, b := range bypasses {
+			acao, reflected, creds := corsOrigin(ctx, s, base, b.origin)
+			if reflected {
+				sev := scan.SeverityMedium
+				note := ""
+				if creds {
+					sev = scan.SeverityHigh
+					note = " with Access-Control-Allow-Credentials: true, so a malicious site can read authenticated responses"
+				}
+				return []*scan.Issue{{
+					Check: "cors-misconfig", Name: "CORS: origin allow-list bypass",
+					URL:      acaoFor,
+					Severity: sev, Confidence: scan.ConfidenceFirm,
+					Detail:      "The response reflected the origin " + b.origin + " in Access-Control-Allow-Origin" + note + ". This indicates " + b.how + ".",
+					Remediation: "Match the Origin against an exact allow-list (full-string equality), not a prefix/suffix/substring, and never trust arbitrary subdomains for credentialed endpoints.",
+					Evidence:    "Origin: " + b.origin + " -> Access-Control-Allow-Origin: " + acao,
+					CWE:         "CWE-942",
+				}}
+			}
+		}
+	}
+
+	// 2) The "null" origin (reachable from a sandboxed iframe / data: document).
+	if acao, reflected, creds := corsOrigin(ctx, s, base, "null"); reflected || strings.EqualFold(acao, "null") {
+		sev := scan.SeverityMedium
+		note := ""
+		if creds {
+			sev = scan.SeverityHigh
+			note = " and allows credentials"
+		}
+		return []*scan.Issue{{
+			Check: "cors-misconfig", Name: "CORS: null origin allowed",
+			URL:      acaoFor,
+			Severity: sev, Confidence: scan.ConfidenceFirm,
+			Detail:      "The response allows the \"null\" origin in Access-Control-Allow-Origin" + note + ". An attacker can obtain a null origin from a sandboxed iframe or data: document and make cross-origin reads.",
+			Remediation: "Never allow the null origin. Validate Origin against an exact allow-list.",
+			Evidence:    "Origin: null -> Access-Control-Allow-Origin: " + acao,
+			CWE:         "CWE-942",
+		}}
+	}
+
+	// 3) Arbitrary reflected origin / wildcard (the original checks).
+	acao, reflects, creds := corsOrigin(ctx, s, base, evilOrigin)
 	if acao == "" {
 		return nil
 	}
-	reflects := acao == evilOrigin
 	wildcard := acao == "*"
-	creds := strings.EqualFold(resp.Header.Get("Access-Control-Allow-Credentials"), "true")
 
 	if reflects && creds {
 		return []*scan.Issue{{
