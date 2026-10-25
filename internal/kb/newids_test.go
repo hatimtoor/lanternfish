@@ -8,7 +8,7 @@ import "testing"
 func TestCheckIDsResolveToLessons(t *testing.T) {
 	ids := []string{
 		"csp-weakness", "path-traversal-oracle", "sqli-oob",
-		"command-injection-oob", "command-injection-inband", "sqli-time-blind",
+		"command-injection-oob", "command-injection-inband", "sqli-time-blind", "ssrf",
 		"sqli-error", "xpath-injection", "ldap-injection", "reflected-xss",
 	}
 	for _, id := range ids {

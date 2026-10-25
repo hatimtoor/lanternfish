@@ -50,6 +50,7 @@ func Active() []scan.ActiveCheck {
 		CommandInjection{},
 		BlindCommandInjection{},
 		BlindSQLiOOB{},
+		SSRFMetadata{},
 		BlindSSRF{},
 		LDAPInjection{},
 		XPathInjection{},
