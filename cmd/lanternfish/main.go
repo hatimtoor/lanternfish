@@ -459,6 +459,12 @@ func cmdAuto(args []string) {
 		} else {
 			log.Printf("logged in via browser: captured %d session cookie(s)", n)
 		}
+		creds := browser.Creds{
+			LoginURL: *loginURL, User: *loginUser, Pass: *loginPass,
+			UserField: *loginUserField, PassField: *loginPassField, Submit: *loginSubmit,
+		}
+		// Re-login automatically if the session is lost during the scan.
+		svc.SetReauth(func() error { _, e := svc.BrowserLogin(creds); return e })
 	}
 	// Zero-config out-of-band for remote targets, so blind findings fire without
 	// any DNS/collaborator setup.

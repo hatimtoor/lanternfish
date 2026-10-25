@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -48,6 +49,9 @@ type Service struct {
 	oastMu     sync.Mutex
 	interactor scan.Interactor // out-of-band provider (local OAST or hosted collaborator)
 	live       liveAudit       // auto-audit of observed proxy traffic
+	reauth     func() error    // optional re-login when the session is lost mid-scan
+	reauthMu   sync.Mutex
+	lastReauth time.Time
 }
 
 // scanCtx augments ctx with the out-of-band interactor if one is set.
@@ -142,6 +146,64 @@ func (s *Service) BrowserLogin(c browser.Creds) (int, error) {
 		s.Sess.SetAuthHeader("Cookie", h)
 	}
 	return len(cookies), nil
+}
+
+// reauthCooldown bounds how often a lost session triggers a re-login, so a
+// genuinely unauthenticated target cannot drive an endless re-auth loop.
+const reauthCooldown = 20 * time.Second
+
+// SetReauth registers a function that re-establishes the session (e.g. a fresh
+// browser login or macro run). When a scan response looks logged-out, the
+// service calls it, at most once per cooldown.
+func (s *Service) SetReauth(fn func() error) {
+	s.reauthMu.Lock()
+	s.reauth = fn
+	s.reauthMu.Unlock()
+}
+
+// looksLoggedOut heuristically detects a response served because the session
+// expired: an auth status, a redirect to a login page, or a login form returned
+// in place of content.
+func looksLoggedOut(resp *httpmsg.Response) bool {
+	if resp == nil {
+		return false
+	}
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return true
+	}
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		if loginRe.MatchString(resp.Header.Get("Location")) {
+			return true
+		}
+	}
+	if resp.StatusCode == 200 {
+		b := resp.BodyString()
+		if strings.Contains(strings.ToLower(b), "type=\"password\"") || strings.Contains(strings.ToLower(b), "type=password") {
+			if loginRe.MatchString(b) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+var loginRe = regexp.MustCompile(`(?i)log[\s-]?in|sign[\s-]?in|signin|/sso|/auth`)
+
+// maybeReauth re-logs-in when resp looks logged-out, a reauth is configured, and
+// the cooldown has elapsed. Returns true if it re-authenticated.
+func (s *Service) maybeReauth(resp *httpmsg.Response) bool {
+	s.reauthMu.Lock()
+	fn := s.reauth
+	if fn == nil || time.Since(s.lastReauth) < reauthCooldown || !looksLoggedOut(resp) {
+		s.reauthMu.Unlock()
+		return false
+	}
+	s.lastReauth = time.Now()
+	s.reauthMu.Unlock()
+	if err := fn(); err != nil {
+		return false
+	}
+	return true
 }
 
 // SetRateLimit caps scan requests per second across all concurrent probes (0 =
@@ -291,6 +353,14 @@ func (s *Service) ScanRequestMode(ctx context.Context, base *httpmsg.Request, fa
 	start := time.Now()
 	col := scan.NewCollector()
 	if resp, err := s.scanSender().Send(ctx, base); err == nil {
+		// If the session was lost, re-authenticate and re-fetch so the scan sees
+		// the real authenticated response rather than a login page.
+		if s.maybeReauth(resp) {
+			s.Sess.ApplyAuth(base.Header)
+			if r2, err2 := s.scanSender().Send(ctx, base); err2 == nil {
+				resp = r2
+			}
+		}
 		s.Sess.Add(session.SourceScanner, &httpmsg.Transaction{Request: base, Response: resp})
 		eng.Passive(&httpmsg.Transaction{Request: base, Response: resp}, col)
 	}
