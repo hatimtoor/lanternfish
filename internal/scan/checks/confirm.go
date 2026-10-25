@@ -62,24 +62,49 @@ func insideComment(body string, pos int) bool {
 type baseline struct {
 	status int
 	length int
-	stable bool // two baseline fetches agreed closely
+	stable bool // the benign fetches agreed closely
+	jitter int  // largest body-length variation seen across benign fetches
 }
 
-// stableBaseline fetches the insertion point's original value twice and reports
-// whether the response is stable (similar status and length). Checks that infer
-// injection from a response *difference* should bail when the baseline is not
-// stable, because a naturally varying page produces difference by itself.
+// stableBaseline samples the insertion point's original value a few times and
+// reports whether the response is stable (same status, similar length) along
+// with the natural length jitter. Checks that infer injection from a response
+// *difference* bail when the baseline is unstable, and demand a change larger
+// than the jitter, so a naturally varying page does not produce false findings.
 func stableBaseline(ctx context.Context, s scan.Sender, p scan.InsertionPoint) (baseline, bool) {
-	r1, err := s.Send(ctx, p.Mutate(p.Base))
-	if err != nil || r1 == nil {
+	var lens, statuses []int
+	for i := 0; i < 3; i++ {
+		r, err := s.Send(ctx, p.Mutate(p.Base))
+		if err != nil || r == nil {
+			if i == 0 {
+				return baseline{}, false
+			}
+			break
+		}
+		lens = append(lens, len(r.Body))
+		statuses = append(statuses, r.StatusCode)
+	}
+	if len(lens) == 0 {
 		return baseline{}, false
 	}
-	r2, err := s.Send(ctx, p.Mutate(p.Base))
-	if err != nil || r2 == nil {
-		return baseline{}, false
+	b := baseline{status: statuses[0], length: lens[0], stable: true}
+	for i := 0; i < len(lens); i++ {
+		if statuses[i] != statuses[0] {
+			b.stable = false
+		}
+		for j := i + 1; j < len(lens); j++ {
+			d := lens[i] - lens[j]
+			if d < 0 {
+				d = -d
+			}
+			if d > b.jitter {
+				b.jitter = d
+			}
+			if !similarLen(lens[i], lens[j]) {
+				b.stable = false
+			}
+		}
 	}
-	b := baseline{status: r1.StatusCode, length: len(r1.Body)}
-	b.stable = r1.StatusCode == r2.StatusCode && similarLen(len(r1.Body), len(r2.Body))
 	return b, true
 }
 

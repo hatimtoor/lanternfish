@@ -163,8 +163,14 @@ func boolDiffInjection(ctx context.Context, s scan.Sender, p scan.InsertionPoint
 	if d < 0 {
 		d = -d
 	}
-	if d >= 16 && !similarLen(lt, lf) {
-		return fmt.Sprintf("true-condition response %d bytes vs false-condition %d bytes", lt, lf), true
+	// The true/false difference must clear both a floor and the page's natural
+	// jitter (×3), so a lively page's own variation cannot look like injection.
+	thresh := 16
+	if j := b.jitter * 3; j > thresh {
+		thresh = j
+	}
+	if d >= thresh && !similarLen(lt, lf) {
+		return fmt.Sprintf("true-condition response %d bytes vs false-condition %d bytes (page jitter ~%d)", lt, lf, b.jitter), true
 	}
 	return "", false
 }
