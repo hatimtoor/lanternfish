@@ -3,7 +3,6 @@ package checks
 import (
 	"context"
 	"strings"
-	"time"
 
 	"lanternfish/internal/httpmsg"
 	"lanternfish/internal/scan"
@@ -16,7 +15,9 @@ type BlindSSRF struct{}
 
 func (BlindSSRF) ID() string { return "blind-ssrf" }
 
-func (BlindSSRF) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+// ProbeOOB injects an out-of-band callback URL and returns a watch for the
+// engine to poll once after the audit pass.
+func (BlindSSRF) ProbeOOB(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []scan.OOBWatch {
 	interactor, ok := scan.InteractorFrom(ctx)
 	if !ok {
 		return nil
@@ -36,24 +37,21 @@ func (BlindSSRF) Active(ctx context.Context, s scan.Sender, base *httpmsg.Reques
 			continue
 		}
 	}
+	return []scan.OOBWatch{{
+		Tokens: []string{token},
+		Issue: &scan.Issue{
+			Check: "blind-ssrf", Name: "Blind server-side request forgery (out-of-band)",
+			URL: base.AbsoluteURL().String(), Param: p.Name,
+			Severity: scan.SeverityHigh, Confidence: scan.ConfidenceCertain,
+			Detail:      "Injecting an out-of-band callback URL into parameter " + p.Name + " caused the server to make a request to the Lanternfish OAST listener, confirming server-side request forgery.",
+			Remediation: "Validate and allow-list outbound request targets. Reject user-supplied URLs/hosts, and block requests to internal ranges and metadata endpoints.",
+			CWE:         "CWE-918",
+		},
+	}}
+}
 
-	// Give the target a moment to make the out-of-band request.
-	deadline := time.Now().Add(4 * time.Second)
-	for time.Now().Before(deadline) {
-		if interactor.Hits(token) > 0 {
-			return []*scan.Issue{{
-				Check: "blind-ssrf", Name: "Blind server-side request forgery (out-of-band)",
-				URL: base.AbsoluteURL().String(), Param: p.Name,
-				Severity: scan.SeverityHigh, Confidence: scan.ConfidenceCertain,
-				Detail:      "Injecting an out-of-band callback URL into parameter " + p.Name + " caused the server to make a request to the Lanternfish OAST listener, confirming server-side request forgery.",
-				Remediation: "Validate and allow-list outbound request targets. Reject user-supplied URLs/hosts, and block requests to internal ranges and metadata endpoints.",
-				Evidence:    strings.Join(interactor.HitDetails(token), "; "),
-				CWE:         "CWE-918",
-			}}
-		}
-		time.Sleep(300 * time.Millisecond)
-	}
-	return nil
+func (c BlindSSRF) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+	return waitOOB(ctx, c.ProbeOOB(ctx, s, base, p))
 }
 
 func looksURLish(name, value string) bool {

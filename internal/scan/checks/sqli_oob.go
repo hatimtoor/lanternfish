@@ -2,8 +2,6 @@ package checks
 
 import (
 	"context"
-	"strings"
-	"time"
 
 	"lanternfish/internal/httpmsg"
 	"lanternfish/internal/scan"
@@ -26,7 +24,9 @@ type BlindSQLiOOB struct{}
 
 func (BlindSQLiOOB) ID() string { return "sqli-oob" }
 
-func (BlindSQLiOOB) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+// ProbeOOB fires the per-DBMS exfiltration payloads without waiting and returns
+// a watch the engine polls once after the audit pass.
+func (BlindSQLiOOB) ProbeOOB(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []scan.OOBWatch {
 	interactor, ok := scan.InteractorFrom(ctx)
 	if !ok {
 		return nil
@@ -78,23 +78,20 @@ func (BlindSQLiOOB) Active(ctx context.Context, s scan.Sender, base *httpmsg.Req
 		}
 	}
 
-	deadline := time.Now().Add(6 * time.Second)
-	for time.Now().Before(deadline) {
-		for _, tok := range tokens {
-			if interactor.Hits(tok) > 0 {
-				return []*scan.Issue{{
-					Check: "sqli-oob", Name: "SQL injection (out-of-band)",
-					URL: base.AbsoluteURL().String(), Param: p.Name,
-					Severity: scan.SeverityCritical, Confidence: scan.ConfidenceCertain,
-					Detail: "Injecting a database payload that performs a DNS/HTTP lookup to a unique Lanternfish collaborator host into " + vectorLabel(p) +
-						" caused the backend database to contact the listener, confirming out-of-band SQL injection.",
-					Remediation: "Use parameterized queries/prepared statements. Never concatenate input into SQL, and restrict database privileges (no xp_dirtree/UTL_HTTP/LOAD_FILE/COPY TO PROGRAM for the app account).",
-					Evidence:    strings.Join(interactor.HitDetails(tok), "; "),
-					CWE:         "CWE-89",
-				}}
-			}
-		}
-		time.Sleep(300 * time.Millisecond)
-	}
-	return nil
+	return []scan.OOBWatch{{
+		Tokens: tokens,
+		Issue: &scan.Issue{
+			Check: "sqli-oob", Name: "SQL injection (out-of-band)",
+			URL: base.AbsoluteURL().String(), Param: p.Name,
+			Severity: scan.SeverityCritical, Confidence: scan.ConfidenceCertain,
+			Detail: "Injecting a database payload that performs a DNS/HTTP lookup to a unique Lanternfish collaborator host into " + vectorLabel(p) +
+				" caused the backend database to contact the listener, confirming out-of-band SQL injection.",
+			Remediation: "Use parameterized queries/prepared statements. Never concatenate input into SQL, and restrict database privileges (no xp_dirtree/UTL_HTTP/LOAD_FILE/COPY TO PROGRAM for the app account).",
+			CWE:         "CWE-89",
+		},
+	}}
+}
+
+func (c BlindSQLiOOB) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+	return waitOOB(ctx, c.ProbeOOB(ctx, s, base, p))
 }

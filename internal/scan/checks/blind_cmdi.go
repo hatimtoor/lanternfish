@@ -40,7 +40,9 @@ func (BlindCommandInjection) AppliesTo(k scan.Kind) bool {
 	}
 }
 
-func (BlindCommandInjection) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+// ProbeOOB fires the command-injection callback payloads without waiting and
+// returns a watch; the engine polls it once after the whole audit pass.
+func (BlindCommandInjection) ProbeOOB(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []scan.OOBWatch {
 	interactor, ok := scan.InteractorFrom(ctx)
 	if !ok {
 		return nil
@@ -93,22 +95,44 @@ func (BlindCommandInjection) Active(ctx context.Context, s scan.Sender, base *ht
 			continue
 		}
 	}
+	return []scan.OOBWatch{{
+		Tokens: tokens,
+		Issue: &scan.Issue{
+			Check: "command-injection-oob",
+			Name:  "OS command injection (out-of-band)",
+			URL:   base.AbsoluteURL().String(), Param: p.Name,
+			Severity: scan.SeverityCritical, Confidence: scan.ConfidenceCertain,
+			Detail:      "Injecting a command that resolves/fetches a unique Lanternfish OAST callback into " + vectorLabel(p) + " caused the server to contact the listener, confirming out-of-band OS command injection.",
+			Remediation: "Never pass user input to a shell or OS command. Use parameterized process APIs with an argument array (no shell), validate against a strict allow-list, and drop shell-metacharacter interpretation.",
+			CWE:         "CWE-78",
+		},
+	}}
+}
 
-	// Give the target a moment to make the out-of-band request.
-	deadline := time.Now().Add(5 * time.Second)
+func (c BlindCommandInjection) Active(ctx context.Context, s scan.Sender, base *httpmsg.Request, p scan.InsertionPoint) []*scan.Issue {
+	return waitOOB(ctx, c.ProbeOOB(ctx, s, base, p))
+}
+
+// waitOOB fires-and-waits for a set of watches (used by the direct Active path,
+// e.g. unit tests and single-point callers; the engine batches instead).
+func waitOOB(ctx context.Context, watches []scan.OOBWatch) []*scan.Issue {
+	if len(watches) == 0 {
+		return nil
+	}
+	interactor, ok := scan.InteractorFrom(ctx)
+	if !ok {
+		return nil
+	}
+	deadline := time.Now().Add(6 * time.Second)
 	for time.Now().Before(deadline) {
-		for _, tok := range tokens {
-			if interactor.Hits(tok) > 0 {
-				return []*scan.Issue{{
-					Check: "command-injection-oob",
-					Name:  "OS command injection (out-of-band)",
-					URL:   base.AbsoluteURL().String(), Param: p.Name,
-					Severity: scan.SeverityCritical, Confidence: scan.ConfidenceCertain,
-					Detail:      "Injecting a command that resolves/fetches a unique Lanternfish OAST callback into " + vectorLabel(p) + " caused the server to contact the listener, confirming out-of-band OS command injection.",
-					Remediation: "Never pass user input to a shell or OS command. Use parameterized process APIs with an argument array (no shell), validate against a strict allow-list, and drop shell-metacharacter interpretation.",
-					Evidence:    strings.Join(interactor.HitDetails(tok), "; "),
-					CWE:         "CWE-78",
-				}}
+		for _, w := range watches {
+			for _, tok := range w.Tokens {
+				if interactor.Hits(tok) > 0 {
+					if w.Issue != nil {
+						w.Issue.Evidence = strings.Join(interactor.HitDetails(tok), "; ")
+						return []*scan.Issue{w.Issue}
+					}
+				}
 			}
 		}
 		time.Sleep(300 * time.Millisecond)
