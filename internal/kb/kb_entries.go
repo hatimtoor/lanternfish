@@ -138,6 +138,15 @@ var entries = map[string]Entry{
 		Fix:     "Disable external entity and DTD processing in the XML parser (the default-secure setting in most libraries).",
 		Refs:    []string{"https://portswigger.net/web-security/xxe", "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html"},
 	},
+	"csp-weakness": {
+		Title:   "Weak Content-Security-Policy",
+		What:    "A CSP is set, but a directive in it (such as 'unsafe-inline' or a wildcard script-src) lets attacker-controlled script run anyway, so the policy does not actually stop XSS.",
+		Why:     "Teams often add a CSP and assume XSS is handled. A policy that allows 'unsafe-inline' or scripts from any host provides little real protection — an injected <script> or event handler still executes.",
+		Confirm: "Read the Content-Security-Policy header. Find the effective script-src (or default-src if script-src is absent) and look for 'unsafe-inline', 'unsafe-eval', *, a bare http:/https:, or data:. Check that object-src and base-uri are set.",
+		Exploit: "In a lab with 'unsafe-inline' allowed, show that an injected inline <script> or onerror handler still runs despite the CSP. Use Google's CSP Evaluator to visualise the gaps.",
+		Fix:     "Drop 'unsafe-inline'/'unsafe-eval'; allow scripts only from 'self' plus per-response nonces or hashes. Add object-src 'none' and base-uri 'none'. Restrict default-src.",
+		Refs:    []string{"https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html", "https://csp-evaluator.withgoogle.com/"},
+	},
 	"cors-misconfig": {
 		Title:   "CORS misconfiguration",
 		What:    "The app reflects the request Origin into Access-Control-Allow-Origin and allows credentials, so any site can read authenticated responses.",

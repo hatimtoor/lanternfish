@@ -54,5 +54,7 @@ var prefixes = []struct{ prefix, key string }{
 	{"dom-prototype", "dom-prototype-pollution"},
 	{"dom-", "dom-xss"},
 	{"command-injection", "command-injection"},
+	{"path-traversal", "path-traversal"},
+	{"csp-", "csp-weakness"},
 	{"ext:", "exposed-secrets"},
 }
