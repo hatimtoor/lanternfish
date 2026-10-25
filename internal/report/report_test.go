@@ -82,3 +82,20 @@ func TestWriteTextNoIssues(t *testing.T) {
 		t.Error("empty report should say no issues")
 	}
 }
+
+func TestHTMLReportHasSeverityFilter(t *testing.T) {
+	r := Build("v", "http://x/", time.Now(), []*scan.Issue{
+		{Check: "reflected-xss", Name: "XSS", URL: "http://x/a", Severity: scan.SeverityHigh, SeverityStr: "high"},
+		{Check: "security-headers", Name: "Missing header", URL: "http://x/b", Severity: scan.SeverityLow, SeverityStr: "low"},
+	})
+	var b strings.Builder
+	if err := r.WriteHTML(&b); err != nil {
+		t.Fatal(err)
+	}
+	h := b.String()
+	for _, want := range []string{`class="chips"`, `data-sev="high"`, `data-sev="low"`, `onclick="lf(`, "function lf("} {
+		if !strings.Contains(h, want) {
+			t.Errorf("HTML report missing %q", want)
+		}
+	}
+}

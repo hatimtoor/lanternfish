@@ -87,14 +87,25 @@ func (r *Report) WriteHTML(w io.Writer) error {
 	b.WriteString(".critical{background:#c0392b}.high{background:#e67e22}.medium{background:#d4ac0d;color:#111}.low{background:#2e86de}.info{background:#7f8c8d}")
 	b.WriteString(".issue{border:1px solid #dde;border-radius:6px;padding:12px;margin:10px 0}code{background:#f2f4f7;padding:1px 4px;border-radius:3px}")
 	b.WriteString(".learn{margin-top:8px;border-left:3px solid #2e86de;padding-left:10px}.learn summary{cursor:pointer;color:#2e86de}.learn a{color:#2e86de}")
+	b.WriteString(".chips{margin:12px 0}.chip{cursor:pointer;border:1px solid #cdd;border-radius:14px;padding:3px 12px;margin-right:6px;font-size:13px;user-select:none}.chip.off{opacity:.4}.chip.active{outline:2px solid #1c2430}")
 	b.WriteString("</style></head><body>")
 	fmt.Fprintf(&b, "<h1>Lanternfish scan report</h1><p>Target: <code>%s</code> · %s · completed in %s</p>",
 		esc(r.Target), r.StartedAt.Format("2006-01-02 15:04"), esc(r.Duration))
-	fmt.Fprintf(&b, "<p>%d issue(s): critical %d, high %d, medium %d, low %d, info %d</p>",
-		r.Summary.Total, r.Summary.Critical, r.Summary.High, r.Summary.Medium, r.Summary.Low, r.Summary.Info)
+	// Clickable severity filter chips (click to show only that severity; click
+	// "all" to reset). Pure inline JS so the report works offline.
+	fmt.Fprintf(&b, `<div class="chips"><span class="chip active" data-f="all" onclick="lf('all',this)">All %d</span>`, r.Summary.Total)
+	for _, s := range []struct {
+		key   string
+		count int
+	}{{"critical", r.Summary.Critical}, {"high", r.Summary.High}, {"medium", r.Summary.Medium}, {"low", r.Summary.Low}, {"info", r.Summary.Info}} {
+		if s.count > 0 {
+			fmt.Fprintf(&b, `<span class="chip sev %s" data-f="%s" onclick="lf('%s',this)">%s %d</span>`, s.key, s.key, s.key, upper(s.key), s.count)
+		}
+	}
+	b.WriteString(`</div>`)
 	for _, is := range r.Issues {
-		fmt.Fprintf(&b, `<div class="issue"><span class="sev %s">%s</span> <b>%s</b> <span style="color:#888">%s %s</span>`,
-			esc(is.SeverityStr), esc(upper(is.SeverityStr)), esc(is.Name), esc(is.ConfStr), esc(is.CWE))
+		fmt.Fprintf(&b, `<div class="issue" data-sev="%s"><span class="sev %s">%s</span> <b>%s</b> <span style="color:#888">%s %s</span>`,
+			esc(is.SeverityStr), esc(is.SeverityStr), esc(upper(is.SeverityStr)), esc(is.Name), esc(is.ConfStr), esc(is.CWE))
 		fmt.Fprintf(&b, `<div><code>%s</code>%s</div>`, esc(is.URL), paramHTML(is.Param))
 		fmt.Fprintf(&b, `<p>%s</p>`, esc(is.Detail))
 		if is.Evidence != "" {
@@ -121,6 +132,9 @@ func (r *Report) WriteHTML(w io.Writer) error {
 		}
 		b.WriteString("</div>")
 	}
+	b.WriteString(`<script>function lf(f,el){` +
+		`document.querySelectorAll('.issue').forEach(function(d){d.style.display=(f==='all'||d.getAttribute('data-sev')===f)?'':'none'});` +
+		`document.querySelectorAll('.chip').forEach(function(c){c.classList.toggle('active',c.getAttribute('data-f')===f)});}</script>`)
 	b.WriteString("</body></html>")
 	_, err := io.WriteString(w, b.String())
 	return err
