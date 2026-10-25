@@ -10,6 +10,7 @@ import "lanternfish/internal/scan"
 func Passive() []scan.PassiveCheck {
 	base := []scan.PassiveCheck{
 		SecurityHeaders{},
+		CSPWeakness{},
 		ExposedSecrets{},
 		VerboseError{},
 		DirectoryListing{},
