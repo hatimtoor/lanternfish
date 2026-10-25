@@ -413,6 +413,8 @@ func cmdAuto(args []string) {
 	reportFile := fs.String("report", "", "write an HTML report of all issues to this file")
 	authHeader := fs.String("auth-header", "", "an auth header to send on every request, e.g. \"Authorization: Bearer <token>\"")
 	cookie := fs.String("cookie", "", "a Cookie header value to send for authenticated scanning")
+	oob := fs.String("oob", "local", "out-of-band provider: local (loopback listener) or interactsh[:server] (public, zero-setup, works against remote targets)")
+	rate := fs.Float64("rate", 0, "max requests per second (0 = unlimited; use it to scan third-party targets politely)")
 	yes := fs.Bool("yes", false, "skip the authorization confirmation (for non-interactive use)")
 	pos := mustParse(fs, args)
 
@@ -437,6 +439,16 @@ func cmdAuto(args []string) {
 		sess.SetAuthHeader("Cookie", *cookie)
 	}
 	svc := service.New(sess, *insecure)
+	svc.SetRateLimit(*rate)
+	// Zero-config out-of-band for remote targets, so blind findings fire without
+	// any DNS/collaborator setup.
+	if _, server, isIsh := parseOOB(*oob); isIsh && !*fast {
+		if err := svc.UseInteractsh(server); err != nil {
+			log.Printf("warning: interactsh unavailable (%v); using local listener", err)
+		} else {
+			log.Printf("out-of-band: using a public Interactsh server for blind-vuln callbacks")
+		}
+	}
 	ctx, cancel := signalContext()
 	defer cancel()
 

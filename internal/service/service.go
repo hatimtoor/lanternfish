@@ -40,6 +40,7 @@ type Service struct {
 	Ext        *ext.Manager  // optional extension (webhook) manager
 	Reg        *ext.Registry // native (in-process) extension registry
 	up         *client.Client
+	sender     scan.Sender  // up, optionally rate-limited, used for scan audits
 	eng        *scan.Engine // full engine
 	engFast    *scan.Engine // engine without wait-heavy checks
 	insecure   bool
@@ -116,15 +117,35 @@ func (s *Service) SetInteractor(i scan.Interactor) {
 
 // New builds a Service.
 func New(sess *session.Session, insecure bool) *Service {
+	up := client.New(client.Options{InsecureSkipVerify: insecure, FollowRedirects: false, HTTP3: os.Getenv("LANTERNFISH_HTTP3") != ""})
 	return &Service{
 		Sess:     sess,
 		Reg:      ext.NewRegistry(),
-		up:       client.New(client.Options{InsecureSkipVerify: insecure, FollowRedirects: false, HTTP3: os.Getenv("LANTERNFISH_HTTP3") != ""}),
+		up:       up,
+		sender:   up,
 		eng:      scan.NewEngine(checks.Passive(), checks.Active()).WithRequestChecks(checks.Request()),
 		engFast:  scan.NewEngine(checks.Passive(), checks.ActiveFast()).WithRequestChecks(checks.Request()),
 		insecure: insecure,
 		sched:    newScheduler(),
 	}
+}
+
+// SetRateLimit caps scan requests per second across all concurrent probes (0 =
+// unlimited). Use it to scan a third-party target politely.
+func (s *Service) SetRateLimit(perSec float64) {
+	if perSec > 0 {
+		s.sender = scan.NewThrottle(s.up, perSec)
+	} else {
+		s.sender = s.up
+	}
+}
+
+// scanSender returns the Sender for scan audits (rate-limited if configured).
+func (s *Service) scanSender() scan.Sender {
+	if s.sender != nil {
+		return s.sender
+	}
+	return s.up
 }
 
 // UseExtension registers a native in-process extension and applies the passive
@@ -255,7 +276,7 @@ func (s *Service) ScanRequestMode(ctx context.Context, base *httpmsg.Request, fa
 	s.Sess.ApplyAuth(base.Header)
 	start := time.Now()
 	col := scan.NewCollector()
-	if resp, err := s.up.Send(ctx, base); err == nil {
+	if resp, err := s.scanSender().Send(ctx, base); err == nil {
 		s.Sess.Add(session.SourceScanner, &httpmsg.Transaction{Request: base, Response: resp})
 		eng.Passive(&httpmsg.Transaction{Request: base, Response: resp}, col)
 	}
@@ -263,7 +284,7 @@ func (s *Service) ScanRequestMode(ctx context.Context, base *httpmsg.Request, fa
 	if !fast {
 		ctx2 = s.scanCtx(ctx) // only full mode needs the OAST interactor
 	}
-	eng.Audit(ctx2, s.up, base, col)
+	eng.Audit(ctx2, s.scanSender(), base, col)
 	issues := col.Issues()
 	s.Sess.AddIssues(issues...)
 	return &ScanResult{Target: base.AbsoluteURL().String(), Issues: issues, Duration: time.Since(start).Round(time.Millisecond).String()}, nil
@@ -277,7 +298,7 @@ func (s *Service) AuditRequest(ctx context.Context, base *httpmsg.Request) []*sc
 	}
 	s.Sess.ApplyAuth(base.Header)
 	col := scan.NewCollector()
-	s.eng.Audit(s.scanCtx(ctx), s.up, base, col)
+	s.eng.Audit(s.scanCtx(ctx), s.scanSender(), base, col)
 	issues := col.Issues()
 	s.Sess.AddIssues(issues...)
 	return issues
