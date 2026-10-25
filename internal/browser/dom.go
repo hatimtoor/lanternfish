@@ -100,10 +100,25 @@ const domHookScript = `
   // Attribute / navigation sinks.
   try{ var sa=Element.prototype.setAttribute; Element.prototype.setAttribute=function(n,v){ if(/^(href|src|srcdoc|action|formaction|data)$/i.test(n)) rec("setAttribute("+n+")",v); return sa.apply(this,arguments);} }catch(e){}
   setProp(HTMLElement.prototype,"srcdoc",function(v){ rec("iframe.srcdoc",v); });
-  // jQuery.html(), if jQuery is present.
-  try{ if(window.jQuery&&jQuery.fn&&jQuery.fn.html){ var jh=jQuery.fn.html; jQuery.fn.html=function(v){ if(typeof v==="string") rec("jQuery.html",v); return jh.apply(this,arguments);} } }catch(e){}
+  // Location / navigation sinks (javascript: URLs or canary in a redirect).
+  try{ var la=location.assign; location.assign=function(u){ rec("location.assign",u); return la.apply(this,arguments);} }catch(e){}
+  try{ var lr=location.replace; location.replace=function(u){ rec("location.replace",u); return lr.apply(this,arguments);} }catch(e){}
+  try{ var wo=window.open; window.open=function(u){ rec("window.open",u); return wo.apply(this,arguments);} }catch(e){}
+  ["HTMLAnchorElement","HTMLAreaElement"].forEach(function(n){ try{ setProp(window[n].prototype,"href",function(v){ rec(n+".href",v); }); }catch(e){} });
+  ["HTMLScriptElement","HTMLIFrameElement","HTMLImageElement","HTMLEmbedElement"].forEach(function(n){ try{ setProp(window[n].prototype,"src",function(v){ rec(n+".src",v); }); }catch(e){} });
+  // Additional HTML-parsing sinks.
+  try{ var ccf=Range.prototype.createContextualFragment; Range.prototype.createContextualFragment=function(s){ rec("createContextualFragment",s); return ccf.apply(this,arguments);} }catch(e){}
+  try{ var dpp=DOMParser.prototype.parseFromString; DOMParser.prototype.parseFromString=function(s){ rec("DOMParser.parseFromString",s); return dpp.apply(this,arguments);} }catch(e){}
+  try{ if(window.ShadowRoot) setProp(ShadowRoot.prototype,"innerHTML",function(v){ rec("ShadowRoot.innerHTML",v); }); }catch(e){}
+  // jQuery manipulation sinks (html + the insert/replace/attr family), if present.
+  try{ if(window.jQuery&&jQuery.fn){
+    ["html","append","prepend","before","after","replaceWith","wrap","wrapAll","wrapInner"].forEach(function(m){ var o=jQuery.fn[m]; if(o){ jQuery.fn[m]=function(v){ if(typeof v==="string") rec("jQuery."+m,v); return o.apply(this,arguments);} } });
+    var oa=jQuery.fn.attr; if(oa){ jQuery.fn.attr=function(n,v){ if(typeof v==="string"&&/^(href|src|srcdoc)$/i.test(n)) rec("jQuery.attr("+n+")",v); return oa.apply(this,arguments);} }
+  } }catch(e){}
   // (Prototype-pollution is checked at collection time, after page scripts run.)
-  // Extra source: deliver the canary via postMessage so message handlers that
-  // sink event.data are exercised.
-  try{ window.setTimeout(function(){ try{ window.postMessage(CANARY,"*"); }catch(e){} }, 250); }catch(e){}
+  // Extra sources: window.name (readable by page scripts) and postMessage in
+  // both string and structured forms, so handlers that sink event.data or
+  // event.data.<field> are exercised.
+  try{ window.name=CANARY; }catch(e){}
+  try{ window.setTimeout(function(){ try{ window.postMessage(CANARY,"*"); window.postMessage({data:CANARY,message:CANARY,url:CANARY},"*"); }catch(e){} }, 250); }catch(e){}
 })();`

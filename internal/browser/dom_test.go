@@ -63,3 +63,36 @@ func TestDOMXSSCleanPage(t *testing.T) {
 		t.Errorf("clean page should have no sink hits, got %+v", res.Hits)
 	}
 }
+
+func TestDOMXSSDetectsNewSinks(t *testing.T) {
+	if !Available() {
+		t.Skip("no Chromium-family browser available")
+	}
+	mux := http.NewServeMux()
+	// Vulnerable: location.hash flows into DOMParser.parseFromString (a sink
+	// added this cycle). Non-navigating, so the probe stays on the page.
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body>
+<script>
+  var h = decodeURIComponent(location.hash.slice(1));
+  new DOMParser().parseFromString('<div>'+h+'</div>', 'text/html');
+</script></body></html>`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	res, err := DOMXSS(srv.URL+"/", 2*time.Second)
+	if err != nil {
+		t.Fatalf("probe failed: %v", err)
+	}
+	var saw bool
+	for _, h := range res.Hits {
+		if h.Sink == "DOMParser.parseFromString" {
+			saw = true
+		}
+	}
+	if !saw {
+		t.Errorf("expected DOMParser.parseFromString sink, got %+v", res.Hits)
+	}
+}
