@@ -13,10 +13,17 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 func html(w http.ResponseWriter) { w.Header().Set("Content-Type", "text/html") }
+
+// storedComment backs the stored-XSS /board endpoint (deliberately unsanitised).
+var (
+	storeMu        sync.Mutex
+	storedComments []string
+)
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:9000", "loopback listen address")
@@ -153,7 +160,58 @@ func main() {
 	})
 	mux.HandleFunc("/api/graphql", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data":{"__schema":{"queryType":{"name":"Query"},"types":[{"name":"User"},{"name":"Order"}]}}}`))
+		body, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+		b := string(body)
+		switch {
+		case strings.HasPrefix(strings.TrimSpace(b), "["): // batched query array
+			w.Write([]byte(`[{"data":{"__typename":"Query"}},{"data":{"__typename":"Query"}}]`))
+		case strings.Contains(b, "__typenam"): // misspelled => field suggestion
+			w.Write([]byte(`{"errors":[{"message":"Cannot query field \"__typenam\" on type \"Query\". Did you mean \"__typename\"?"}]}`))
+		default:
+			w.Write([]byte(`{"data":{"__schema":{"queryType":{"name":"Query"},"types":[{"name":"User"},{"name":"Order"}]}}}`))
+		}
+	})
+	// In-band SSRF: fetching an internal metadata URL reflects its content.
+	mux.HandleFunc("/ssrf-reflect", func(w http.ResponseWriter, r *http.Request) {
+		u := r.URL.Query().Get("url")
+		if strings.Contains(u, "169.254.169.254") {
+			w.Write([]byte("ami-launch-index\nblock-device-mapping/\nreservation-id\ninstance-action\nhostname"))
+			return
+		}
+		w.Write([]byte("nothing fetched"))
+	})
+	// Stored XSS: a comment persisted and rendered unencoded on later loads.
+	mux.HandleFunc("/board", func(w http.ResponseWriter, r *http.Request) {
+		if c := r.URL.Query().Get("comment"); c != "" && c != "hi" {
+			storeMu.Lock()
+			storedComments = append(storedComments, c)
+			if len(storedComments) > 50 { // bound memory; keep recent
+				storedComments = storedComments[len(storedComments)-50:]
+			}
+			storeMu.Unlock()
+		}
+		storeMu.Lock()
+		cur := strings.Join(storedComments, "<br>")
+		storeMu.Unlock()
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte("<html><body><h1>Guestbook</h1><div class=comments>" + cur + "</div></body></html>"))
+	})
+	// Cache poisoning: an unkeyed header reflected into a cacheable response.
+	mux.HandleFunc("/promo", func(w http.ResponseWriter, r *http.Request) {
+		host := r.Header.Get("X-Forwarded-Host")
+		if host == "" {
+			host = r.Host
+		}
+		w.Header().Set("Cache-Control", "public, max-age=60")
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte("<html><body><script src=\"//" + host + "/widget.js\"></script></body></html>"))
+	})
+	// Weak Content-Security-Policy + insecure cookie prefix (passive checks).
+	mux.HandleFunc("/weakhdrs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' *")
+		w.Header().Set("Set-Cookie", "__Host-sid=abc; Path=/; HttpOnly") // __Host- without Secure => violation
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte("<html><body>weak headers demo</body></html>"))
 	})
 	mux.HandleFunc("/cors", func(w http.ResponseWriter, r *http.Request) {
 		if o := r.Header.Get("Origin"); o != "" {
