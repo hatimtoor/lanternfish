@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -320,6 +321,26 @@ func cmdScan(args []string) {
 	eng.Concurrency = *conc
 	col := scan.NewCollector()
 	started := time.Now()
+
+	// Live progress to stderr (throttled) so a long scan is not a silent wait.
+	// Skipped when emitting JSON to keep stdout/stderr clean for piping.
+	if !*asJSON {
+		var pmu sync.Mutex
+		var last time.Time
+		eng.OnProgress = func(done, total int) {
+			pmu.Lock()
+			defer pmu.Unlock()
+			now := time.Now()
+			if done < total && now.Sub(last) < 150*time.Millisecond {
+				return
+			}
+			last = now
+			fmt.Fprintf(os.Stderr, "\rscanning: %d/%d probes", done, total)
+			if done >= total {
+				fmt.Fprintln(os.Stderr)
+			}
+		}
+	}
 
 	ctx, cancel := signalContext()
 	defer cancel()

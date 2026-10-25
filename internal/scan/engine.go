@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"lanternfish/internal/httpmsg"
@@ -39,6 +40,11 @@ type Engine struct {
 
 	// Concurrency bounds simultaneous active probes.
 	Concurrency int
+
+	// OnProgress, if set, is called as active-check tasks complete, with the
+	// number done and the total planned. It may be called from many goroutines,
+	// so an implementation must be safe for concurrent use.
+	OnProgress func(done, total int)
 }
 
 // NewEngine builds an engine from registered checks.
@@ -86,6 +92,18 @@ func (e *Engine) Audit(ctx context.Context, s Sender, base *httpmsg.Request, col
 	if len(points) == 0 {
 		return
 	}
+	// Count the planned tasks up front so progress can be reported as a fraction.
+	total := 0
+	for _, pt := range points {
+		for _, chk := range e.active {
+			if ka, ok := chk.(KindAwareCheck); ok && !ka.AppliesTo(pt.Kind) {
+				continue
+			}
+			total++
+		}
+	}
+	var done int64
+
 	sem := make(chan struct{}, e.Concurrency)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -104,6 +122,11 @@ func (e *Engine) Audit(ctx context.Context, s Sender, base *httpmsg.Request, col
 			go func(chk ActiveCheck, pt InsertionPoint) {
 				defer wg.Done()
 				defer func() { <-sem }()
+				defer func() {
+					if e.OnProgress != nil {
+						e.OnProgress(int(atomic.AddInt64(&done, 1)), total)
+					}
+				}()
 				// Out-of-band checks fire their payloads now and are polled once
 				// after the pass, instead of each sleeping for a callback.
 				if oob, ok := chk.(OOBCheck); ok {
