@@ -103,3 +103,41 @@ func TestCurriculumComplete(t *testing.T) {
 		}
 	}
 }
+
+func TestCORSAndGraphQLLabs(t *testing.T) {
+	srv := httptest.NewServer(labs.Handler(""))
+	defer srv.Close()
+
+	// CORS: a request with an attacker Origin gets it reflected + the flag.
+	req, _ := http.NewRequest("GET", srv.URL+"/lab/api/me", nil)
+	req.Header.Set("Origin", "https://evil.example")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.Header.Get("Access-Control-Allow-Origin") != "https://evil.example" {
+		t.Errorf("expected reflected origin, got %q", resp.Header.Get("Access-Control-Allow-Origin"))
+	}
+	if !strings.Contains(string(b), "FLAG{cors_origin_reflected_with_credentials}") {
+		t.Errorf("cors lab should reveal the flag, got %s", b)
+	}
+	// Same-origin request must NOT reflect or leak the flag.
+	req2, _ := http.NewRequest("GET", srv.URL+"/lab/api/me", nil)
+	req2.Header.Set("Origin", "http://127.0.0.1")
+	resp2, _ := http.DefaultClient.Do(req2)
+	b2, _ := io.ReadAll(resp2.Body)
+	resp2.Body.Close()
+	if strings.Contains(string(b2), "FLAG{") {
+		t.Errorf("same-origin should not leak the flag")
+	}
+
+	// GraphQL: introspection dump, then read the hidden field.
+	if body := get(t, srv, "/lab/graphql?query="+url.QueryEscape("{__schema{types{name}}}")); !strings.Contains(body, "secret") {
+		t.Errorf("introspection should reveal the secret field, got %s", body)
+	}
+	if body := get(t, srv, "/lab/graphql?query="+url.QueryEscape("{secret}")); !strings.Contains(body, "FLAG{graphql_introspection_schema_dump}") {
+		t.Errorf("graphql lab should reveal the flag, got %s", body)
+	}
+}

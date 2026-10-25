@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -97,6 +98,18 @@ var curriculum = map[string]struct{ owasp, objective, solution, resource string 
 		"Learn how a JWT whose signature isn't verified can be forged to impersonate anyone.",
 		"Base64url-encode header {\"alg\":\"none\"} and payload {\"role\":\"admin\"}, join with a dot and a trailing dot (empty signature): <header>.<payload>. — pass it as token.",
 		"https://portswigger.net/web-security/jwt",
+	},
+	"cors": {
+		"A05:2021 Security Misconfiguration",
+		"Learn why reflecting the Origin header while allowing credentials breaks the same-origin policy and lets a malicious site read authenticated responses.",
+		"Send Origin: https://evil.example. The response echoes it in Access-Control-Allow-Origin with Access-Control-Allow-Credentials: true, so script on evil.example can read the logged-in response.",
+		"https://portswigger.net/web-security/cors",
+	},
+	"graphql": {
+		"A05:2021 Security Misconfiguration",
+		"Learn how leaving GraphQL introspection enabled hands attackers the full schema to map the API.",
+		"Query {__schema{types{name fields{name}}}} to dump the schema, discover the 'secret' field, then query {secret}.",
+		"https://portswigger.net/web-security/graphql",
 	},
 }
 
@@ -224,6 +237,28 @@ var Challenges = []Challenge{
 		},
 		Flag: "FLAG{jwt_alg_none_forgery}",
 	},
+	{
+		ID: "cors", Title: "CORS misconfiguration", Category: "CORS", Difficulty: "medium",
+		Start: "/lab/api/me",
+		Brief: "The API reflects whatever Origin you send and allows credentials, so a malicious site can read a logged-in user's data cross-origin. Send a request with an attacker Origin header and read the authorized response.",
+		Hints: []string{
+			"Add an Origin header pointing at a site you control, e.g. Origin: https://evil.example",
+			"Watch the response Access-Control-Allow-Origin: it echoes your origin, and Allow-Credentials is true.",
+			"That combination lets script on your origin read this response with the victim's cookies.",
+		},
+		Flag: "FLAG{cors_origin_reflected_with_credentials}",
+	},
+	{
+		ID: "graphql", Title: "GraphQL introspection", Category: "API", Difficulty: "easy",
+		Start: "/lab/graphql?query={__typename}",
+		Brief: "The GraphQL endpoint left introspection enabled. Query the schema to discover the hidden field, then read it.",
+		Hints: []string{
+			"Send query={__schema{types{name fields{name}}}} to dump the schema.",
+			"Introspection reveals a field named secret on the Query type.",
+			"Then request query={secret} to read it.",
+		},
+		Flag: "FLAG{graphql_introspection_schema_dump}",
+	},
 }
 
 // Handler returns the labs HTTP handler. selfBase is this server's own base URL
@@ -255,6 +290,39 @@ func Handler(selfBase string) http.Handler {
 			return
 		}
 		fmt.Fprint(w, `{"solved":false,"message":"Not quite. Keep going."}`)
+	})
+
+	// CORS: reflects any Origin with credentials; reveals the flag when an
+	// attacker origin is reflected (what a cross-origin read would expose).
+	mux.HandleFunc("/lab/api/me", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		origin := r.Header.Get("Origin")
+		body := `{"user":"you","email":"you@example.com"}`
+		if origin != "" && !strings.Contains(origin, "127.0.0.1") && !strings.Contains(origin, "localhost") {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			body = `{"user":"you","email":"you@example.com","note":"A page at ` + origin + ` could read this with your cookies. ` + byID["cors"].Flag + `"}`
+		}
+		fmt.Fprint(w, body)
+	})
+
+	// GraphQL: introspection enabled; a schema dump or reading the hidden field
+	// reveals the flag.
+	mux.HandleFunc("/lab/graphql", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query().Get("query")
+		if q == "" {
+			body, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+			q = string(body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case strings.Contains(q, "__schema"):
+			fmt.Fprintf(w, `{"data":{"__schema":{"types":[{"name":"Query","fields":[{"name":"__typename"},{"name":"secret"}]}]}}}`)
+		case strings.Contains(q, "secret"):
+			fmt.Fprintf(w, `{"data":{"secret":"%s"}}`, byID["graphql"].Flag)
+		default:
+			fmt.Fprint(w, `{"data":{"__typename":"Query"}}`)
+		}
 	})
 
 	// Reflected XSS: reflects name; reveals the flag when input injects a tag.
