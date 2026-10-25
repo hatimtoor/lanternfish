@@ -28,7 +28,7 @@ func TestSSRFMetadataDetectsAWS(t *testing.T) {
 	sender := fakeSender{fn: func(r *httpmsg.Request) *httpmsg.Response {
 		body := "home page"
 		if strings.Contains(r.URL.RawQuery, "169.254.169.254") {
-			body = "ami-id\ninstance-id\niam/security-credentials/"
+			body = "ami-launch-index\nblock-device-mapping/\nreservation-id\ninstance-action"
 		}
 		return &httpmsg.Response{StatusCode: 200, Header: http.Header{}, Body: []byte(body)}
 	}}

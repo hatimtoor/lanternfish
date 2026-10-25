@@ -3,6 +3,7 @@ package checks
 import (
 	"context"
 	"regexp"
+	"strings"
 
 	"lanternfish/internal/httpmsg"
 	"lanternfish/internal/scan"
@@ -27,12 +28,15 @@ type ssrfProbe struct {
 	what    string
 }
 
+// Signatures must match only what the metadata service *returns*, never a
+// substring of the probe URL itself — otherwise an endpoint that merely
+// reflects our payload would look like a hit. GCP/Azure IMDS are omitted here
+// because they require a special request header (Metadata-Flavor / Metadata:
+// true) that cannot be set through a URL parameter, so they are never reachable
+// in-band; blind SSRF still covers general SSRF to them.
 var ssrfProbes = []ssrfProbe{
-	{"http://169.254.169.254/latest/meta-data/", regexp.MustCompile(`(?i)ami-id|instance-id|iam/|public-keys|hostname`), "AWS instance metadata"},
-	{"http://169.254.169.254/latest/meta-data/iam/security-credentials/", regexp.MustCompile(`(?i)AccessKeyId|SecretAccessKey|security-credentials`), "AWS IAM credentials"},
-	{"http://metadata.google.internal/computeMetadata/v1/", regexp.MustCompile(`(?i)computeMetadata|project-id|service-accounts`), "GCP instance metadata"},
-	{"http://169.254.169.254/metadata/instance?api-version=2021-02-01", regexp.MustCompile(`(?i)"?azEnvironment"?|"?vmId"?|"?subscriptionId"?`), "Azure instance metadata"},
-	{"http://100.100.100.100/latest/meta-data/", regexp.MustCompile(`(?i)instance-id|region-id|zone-id`), "Alibaba Cloud metadata"},
+	{"http://169.254.169.254/latest/meta-data/", regexp.MustCompile(`(?i)ami-launch-index|block-device-mapping|ami-manifest-path|instance-action|reservation-id`), "AWS instance metadata"},
+	{"http://169.254.169.254/latest/meta-data/iam/security-credentials/", regexp.MustCompile(`(?i)"AccessKeyId"|"SecretAccessKey"|"Token"\s*:`), "AWS IAM credentials"},
 	{"file:///etc/passwd", unixPasswd, "local file /etc/passwd"},
 }
 
@@ -57,7 +61,11 @@ func (SSRFMetadata) Active(ctx context.Context, s scan.Sender, base *httpmsg.Req
 			continue
 		}
 		body := resp.BodyString()
-		if m := pr.sig.FindString(body); m != "" && pr.sig.FindString(baseBody) == "" {
+		m := pr.sig.FindString(body)
+		// Guard: a signature that also appears in the probe URL would match a
+		// mere reflection of our payload, so require it to be absent from both
+		// the payload and the benign baseline.
+		if m != "" && !strings.Contains(pr.payload, m) && pr.sig.FindString(baseBody) == "" {
 			sev := scan.SeverityHigh
 			if pr.what == "AWS IAM credentials" {
 				sev = scan.SeverityCritical
