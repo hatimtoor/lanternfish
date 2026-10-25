@@ -130,6 +130,20 @@ func New(sess *session.Session, insecure bool) *Service {
 	}
 }
 
+// BrowserLogin drives a headless browser through a login form and applies the
+// resulting session cookies as the session's auth, so a subsequent crawl/scan
+// runs authenticated. Returns the number of cookies captured.
+func (s *Service) BrowserLogin(c browser.Creds) (int, error) {
+	cookies, err := browser.Login(c, 0)
+	if err != nil {
+		return 0, err
+	}
+	if h := browser.CookieHeader(cookies); h != "" {
+		s.Sess.SetAuthHeader("Cookie", h)
+	}
+	return len(cookies), nil
+}
+
 // SetRateLimit caps scan requests per second across all concurrent probes (0 =
 // unlimited). Use it to scan a third-party target politely.
 func (s *Service) SetRateLimit(perSec float64) {

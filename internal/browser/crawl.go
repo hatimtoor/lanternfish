@@ -84,17 +84,18 @@ func Crawl(url string, settle time.Duration) (*Result, error) {
 // withPage launches a headless browser, injects initScript before any page
 // script runs, navigates to url, waits for load + settle, then returns the
 // string value of evaluating collectExpr in the page.
-func withPage(url, initScript, collectExpr string, settle time.Duration) (string, error) {
+// withSession launches a headless browser, attaches a CDP session with Page,
+// Runtime and Network enabled (and initScript installed before any page script
+// runs), and invokes fn with the client and session id. It is the shared plumbing
+// behind both crawling and authenticated login.
+func withSession(initScript string, fn func(cdp *CDP, sid string) error) error {
 	bin := findBrowser()
 	if bin == "" {
-		return "", errors.New("no Chromium-family browser found")
-	}
-	if settle <= 0 {
-		settle = 1500 * time.Millisecond
+		return errors.New("no Chromium-family browser found")
 	}
 	profile, err := os.MkdirTemp("", "lanternfish-headless-")
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer os.RemoveAll(profile)
 
@@ -104,23 +105,23 @@ func withPage(url, initScript, collectExpr string, settle time.Duration) (string
 		"--remote-debugging-port=0", "--user-data-dir="+profile, "about:blank",
 	)
 	if err := cmd.Start(); err != nil {
-		return "", err
+		return err
 	}
 	defer func() { _ = cmd.Process.Kill(); _, _ = cmd.Process.Wait() }()
 
 	wsURL, err := readBrowserWS(profile, 15*time.Second)
 	if err != nil {
-		return "", err
+		return err
 	}
 	cdp, err := connectCDP(wsURL)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer cdp.Close()
 
 	raw, err := cdp.call("Target.createTarget", map[string]any{"url": "about:blank"}, "", 10*time.Second)
 	if err != nil {
-		return "", err
+		return err
 	}
 	var ct struct {
 		TargetID string `json:"targetId"`
@@ -128,7 +129,7 @@ func withPage(url, initScript, collectExpr string, settle time.Duration) (string
 	_ = json.Unmarshal(raw, &ct)
 	raw, err = cdp.call("Target.attachToTarget", map[string]any{"targetId": ct.TargetID, "flatten": true}, "", 10*time.Second)
 	if err != nil {
-		return "", err
+		return err
 	}
 	var at struct {
 		SessionID string `json:"sessionId"`
@@ -136,22 +137,22 @@ func withPage(url, initScript, collectExpr string, settle time.Duration) (string
 	_ = json.Unmarshal(raw, &at)
 	sid := at.SessionID
 	if sid == "" {
-		return "", errors.New("CDP attach returned no session")
+		return errors.New("CDP attach returned no session")
 	}
 
 	_, _ = cdp.call("Page.enable", nil, sid, 10*time.Second)
 	_, _ = cdp.call("Runtime.enable", nil, sid, 10*time.Second)
+	_, _ = cdp.call("Network.enable", nil, sid, 10*time.Second)
 	if initScript != "" {
 		_, _ = cdp.call("Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": initScript}, sid, 10*time.Second)
 	}
-	if _, err := cdp.call("Page.navigate", map[string]any{"url": url}, sid, 20*time.Second); err != nil {
-		return "", err
-	}
-	cdp.waitEvent("Page.loadEventFired", 20*time.Second)
-	time.Sleep(settle)
+	return fn(cdp, sid)
+}
 
-	raw, err = cdp.call("Runtime.evaluate", map[string]any{
-		"expression": collectExpr, "returnByValue": true, "awaitPromise": true,
+// evalString evaluates expr in the page and returns its string value.
+func evalString(cdp *CDP, sid, expr string) (string, error) {
+	raw, err := cdp.call("Runtime.evaluate", map[string]any{
+		"expression": expr, "returnByValue": true, "awaitPromise": true,
 	}, sid, 15*time.Second)
 	if err != nil {
 		return "", err
@@ -163,6 +164,24 @@ func withPage(url, initScript, collectExpr string, settle time.Duration) (string
 	}
 	_ = json.Unmarshal(raw, &ev)
 	return ev.Result.Value, nil
+}
+
+func withPage(url, initScript, collectExpr string, settle time.Duration) (string, error) {
+	if settle <= 0 {
+		settle = 1500 * time.Millisecond
+	}
+	var out string
+	err := withSession(initScript, func(cdp *CDP, sid string) error {
+		if _, err := cdp.call("Page.navigate", map[string]any{"url": url}, sid, 20*time.Second); err != nil {
+			return err
+		}
+		cdp.waitEvent("Page.loadEventFired", 20*time.Second)
+		time.Sleep(settle)
+		v, err := evalString(cdp, sid, collectExpr)
+		out = v
+		return err
+	})
+	return out, err
 }
 
 // readBrowserWS polls the DevToolsActivePort file Chromium writes and returns

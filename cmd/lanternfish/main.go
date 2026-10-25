@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"lanternfish/internal/app"
+	"lanternfish/internal/browser"
 	"lanternfish/internal/ca"
 	"lanternfish/internal/client"
 	"lanternfish/internal/httpmsg"
@@ -415,6 +416,12 @@ func cmdAuto(args []string) {
 	cookie := fs.String("cookie", "", "a Cookie header value to send for authenticated scanning")
 	oob := fs.String("oob", "local", "out-of-band provider: local (loopback listener) or interactsh[:server] (public, zero-setup, works against remote targets)")
 	rate := fs.Float64("rate", 0, "max requests per second (0 = unlimited; use it to scan third-party targets politely)")
+	loginURL := fs.String("login-url", "", "log in through a headless browser at this URL before scanning (authenticated scan)")
+	loginUser := fs.String("login-user", "", "username for --login-url")
+	loginPass := fs.String("login-pass", "", "password for --login-url")
+	loginUserField := fs.String("login-user-field", "", "CSS selector for the username field (auto-detected if empty)")
+	loginPassField := fs.String("login-pass-field", "", "CSS selector for the password field (auto-detected if empty)")
+	loginSubmit := fs.String("login-submit", "", "CSS selector for the submit button (auto-detected if empty)")
 	yes := fs.Bool("yes", false, "skip the authorization confirmation (for non-interactive use)")
 	pos := mustParse(fs, args)
 
@@ -440,6 +447,19 @@ func cmdAuto(args []string) {
 	}
 	svc := service.New(sess, *insecure)
 	svc.SetRateLimit(*rate)
+	// Authenticated scan: log in through a headless browser first and reuse the
+	// session cookies for the whole run.
+	if *loginURL != "" {
+		n, err := svc.BrowserLogin(browser.Creds{
+			LoginURL: *loginURL, User: *loginUser, Pass: *loginPass,
+			UserField: *loginUserField, PassField: *loginPassField, Submit: *loginSubmit,
+		})
+		if err != nil {
+			log.Printf("warning: browser login failed (%v); continuing unauthenticated", err)
+		} else {
+			log.Printf("logged in via browser: captured %d session cookie(s)", n)
+		}
+	}
 	// Zero-config out-of-band for remote targets, so blind findings fire without
 	// any DNS/collaborator setup.
 	if _, server, isIsh := parseOOB(*oob); isIsh && !*fast {
