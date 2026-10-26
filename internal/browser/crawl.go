@@ -62,6 +62,41 @@ const collectScript = `(function(){
   return JSON.stringify({links:links, forms:forms, xhr:xhr, routes:routes});
 })()`
 
+// driveSearchScript types a benign marker into search-style inputs and fires the
+// input + Enter-key events a single-page-app search box listens to, so that
+// input-driven routes (e.g. Angular's "#/search?q=...") are navigated and
+// captured by the pushState/hashchange hooks. It is deliberately scoped to
+// clearly search-related inputs (type=search, or id/name/aria-label/placeholder
+// containing "search", or role=searchbox) so it does not drive login or other
+// forms, and it uses synthetic key events (which never trigger implicit form
+// submission) rather than submitting any form, so there is no full-page
+// navigation side effect.
+const driveSearchScript = `
+  var __lfSleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+  try{
+    var __lfSel=['input[type=search]','input[id*="search" i]','input[name*="search" i]','input[aria-label*="search" i]','input[placeholder*="search" i]','[role=searchbox]'];
+    var __lfSeen=[], __lfInputs=[];
+    __lfSel.forEach(function(s){ try{ [].slice.call(document.querySelectorAll(s)).forEach(function(el){ if(__lfSeen.indexOf(el)<0){__lfSeen.push(el);__lfInputs.push(el);} }); }catch(e){} });
+    for(var __i=0;__i<Math.min(__lfInputs.length,3);__i++){
+      var __el=__lfInputs[__i];
+      try{
+        __el.focus();
+        __el.value='lanternfishprobe';
+        __el.dispatchEvent(new Event('input',{bubbles:true}));
+        __el.dispatchEvent(new Event('change',{bubbles:true}));
+        ['keydown','keypress','keyup'].forEach(function(t){ __el.dispatchEvent(new KeyboardEvent(t,{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true})); });
+      }catch(e){}
+      await __lfSleep(350);
+    }
+  }catch(e){}
+  await __lfSleep(400);`
+
+// crawlScript drives search inputs (to surface input-driven SPA routes) and then
+// returns the same links/forms/xhr/routes collection as collectScript. It is an
+// async expression; evalString runs it with awaitPromise so the SPA has time to
+// route before the page is read.
+var crawlScript = "(async function(){" + driveSearchScript + "\nreturn " + collectScript + ";})()"
+
 // Available reports whether a usable Chromium-family browser was found.
 func Available() bool { return findBrowser() != "" }
 
@@ -69,7 +104,7 @@ func Available() bool { return findBrowser() != "" }
 // links, forms, and fetch/XHR endpoints discovered. settle is how long to wait
 // after load for late XHR (default 1.5s).
 func Crawl(url string, settle time.Duration) (*Result, error) {
-	value, err := withPage(url, hookScript, collectScript, settle)
+	value, err := withPage(url, hookScript, crawlScript, settle)
 	if err != nil {
 		return nil, err
 	}
