@@ -13,6 +13,8 @@ func fp(id, name, pattern string) regexPassive {
 		id: "fingerprint-" + id, name: "Technology detected: " + name, cwe: "CWE-200",
 		sev: scan.SeverityInfo, conf: scan.ConfidenceFirm,
 		re: regexp.MustCompile(pattern), headers: true, redactIt: false,
+		detail:      name + " was identified from the response. This is informational — it helps map the stack and look up version-specific advisories.",
+		remediation: "Minimise technology/version disclosure where practical (generic Server/X-Powered-By headers) and keep the component patched.",
 	}
 }
 

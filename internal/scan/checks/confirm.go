@@ -15,6 +15,7 @@ import (
 type reflectionCtx struct {
 	found     bool
 	inComment bool // the only occurrence(s) sit inside <!-- ... -->
+	inRCDATA  bool // the only occurrence(s) sit inside <textarea>/<title> (raw-text, not executable)
 }
 
 // classifyReflection locates needle in body and reports whether every
@@ -22,7 +23,7 @@ type reflectionCtx struct {
 func classifyReflection(body, needle string) reflectionCtx {
 	var rc reflectionCtx
 	from := 0
-	allInComment := true
+	allInComment, allInRCDATA := true, true
 	for {
 		i := strings.Index(body[from:], needle)
 		if i < 0 {
@@ -33,12 +34,34 @@ func classifyReflection(body, needle string) reflectionCtx {
 		if !insideComment(body, pos) {
 			allInComment = false
 		}
+		if !insideRCDATA(body, pos) {
+			allInRCDATA = false
+		}
 		from = pos + len(needle)
 	}
 	if rc.found {
 		rc.inComment = allInComment
+		rc.inRCDATA = allInRCDATA
 	}
 	return rc
+}
+
+// insideRCDATA reports whether pos sits inside a <textarea> or <title> element,
+// whose contents are raw text (RCDATA): a "<" there is literal, not a tag start,
+// so a reflected "<marker" is not executable unless the element's own closing
+// tag is also injected.
+func insideRCDATA(body string, pos int) bool {
+	low := strings.ToLower(body[:pos])
+	for _, tag := range []string{"textarea", "title"} {
+		open := strings.LastIndex(low, "<"+tag)
+		if open < 0 {
+			continue
+		}
+		if !strings.Contains(low[open:], "</"+tag) {
+			return true // an unclosed RCDATA element precedes the reflection
+		}
+	}
+	return false
 }
 
 // insideComment reports whether position pos in body falls within an HTML

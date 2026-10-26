@@ -21,6 +21,11 @@ type regexPassive struct {
 	re       *regexp.Regexp
 	headers  bool
 	redactIt bool
+	// Optional overrides; when empty the secret-detection wording is used (so
+	// the many secret rules stay concise). Fingerprint rules set these so they
+	// do not inherit "this is a leaked secret" text.
+	detail      string
+	remediation string
 }
 
 func (r regexPassive) ID() string { return r.id }
@@ -47,11 +52,19 @@ func (r regexPassive) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 	if r.redactIt {
 		ev = redact(m)
 	}
+	detail := r.detail
+	if detail == "" {
+		detail = r.name + " was found in the response. Secrets must never be returned to clients."
+	}
+	rem := r.remediation
+	if rem == "" {
+		rem = "Remove the value from responses, rotate it, and keep secrets server-side."
+	}
 	return []*scan.Issue{{
 		Check: r.id, Name: r.name, URL: tx.Request.AbsoluteURL().String(),
 		Severity: r.sev, Confidence: r.conf,
-		Detail:      r.name + " was found in the response. Secrets must never be returned to clients.",
-		Remediation: "Remove the value from responses, rotate it, and keep secrets server-side.",
+		Detail:      detail,
+		Remediation: rem,
 		Evidence:    ev, CWE: orCWE(r.cwe, "CWE-200"),
 	}}
 }

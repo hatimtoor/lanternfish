@@ -57,10 +57,19 @@ func (ReflectedXSS) Active(ctx context.Context, s scan.Sender, base *httpmsg.Req
 	}
 	sev := scan.SeverityHigh
 	detail := fmt.Sprintf("Input in parameter %q is reflected into an HTML response without encoding the character %q. Injected tag-start %q was returned verbatim.", p.Name, "<", open)
-	// Reflection-context awareness: if the marker only lands inside an HTML
-	// comment, it is far less likely to be exploitable, so downgrade rather than
-	// report it as a confident high-severity finding.
-	if rc := classifyReflection(body, open); rc.found && rc.inComment {
+	// Reflection-context awareness.
+	rc := classifyReflection(body, open)
+	// If the marker lands only inside a <textarea>/<title> (RCDATA), the "<" is
+	// raw text, not a tag start, so it is not executable XSS unless the element's
+	// closing tag is also injected (which our payload does not). Suppress the
+	// tag-context finding to avoid a false positive (e.g. input echoed in a
+	// framework debug page's traceback textarea), and fall back to the JS probe.
+	if rc.found && rc.inRCDATA {
+		return (ReflectedXSS{}).jsContext(ctx, s, base, p)
+	}
+	// If the marker only lands inside an HTML comment, it is far less likely to
+	// be exploitable, so downgrade rather than report a confident high.
+	if rc.found && rc.inComment {
 		conf = scan.ConfidenceTentative
 		sev = scan.SeverityLow
 		detail += " The reflection appears only inside an HTML comment, which limits exploitability unless the comment can be broken out of."
