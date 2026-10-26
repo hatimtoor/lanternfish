@@ -50,11 +50,23 @@ const collectScript = `(function(){
   var abs=function(h){try{return new URL(h, location.href).href}catch(e){return null}};
   var seen={}, links=[], routes=[];
   var add=function(arr,v){if(v&&!seen[v]){seen[v]=1;arr.push(v)}};
+  // Hash-routed SPAs (Angular HashLocationStrategy, many Vue/React apps) serve
+  // one shell for every server path and route on location.hash. A routerLink
+  // value like "/search" must be probed as "#/search", not the server path
+  // "/search" (which just renders the default page). Detect hash routing from
+  // the loaded URL or any #/ anchor, and map bare route paths into hash form.
+  var hashRouted = /#\//.test(location.href) || !![].slice.call(document.querySelectorAll('a[href^="#/"],a[href^="#!"]')).length;
+  var toRoute=function(h){
+    if(!h) return null;
+    if(/^[a-z][a-z0-9+.-]*:/i.test(h) || h.charAt(0)==='#') return abs(h); // absolute or already a hash-route
+    if(hashRouted) return abs('#'+(h.charAt(0)==='/'?h:'/'+h));
+    return abs(h);
+  };
   [].slice.call(document.querySelectorAll('a[href]')).forEach(function(a){add(links, abs(a.getAttribute('href')))});
   var sel='[routerLink],[routerlink],[data-href],[ng-href],[data-route],[data-link],[data-url]';
   [].slice.call(document.querySelectorAll(sel)).forEach(function(e){
     var h=e.getAttribute('routerLink')||e.getAttribute('routerlink')||e.getAttribute('data-href')||e.getAttribute('ng-href')||e.getAttribute('data-route')||e.getAttribute('data-link')||e.getAttribute('data-url');
-    add(routes, abs(h));
+    add(routes, toRoute(h));
   });
   (window.__lanternfish_routes||[]).forEach(function(r){add(routes, abs(r))});
   var forms=[].slice.call(document.forms).map(function(f){return {action:abs(f.getAttribute('action')||location.href), method:(f.method||'GET').toUpperCase()}});
