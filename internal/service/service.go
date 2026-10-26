@@ -469,6 +469,44 @@ func (s *Service) BrowserCrawl(ctx context.Context, target string) (*browser.Res
 	return res, nil
 }
 
+// DOMProbeTargets selects which URLs the DOM-XSS probe should load. A SPA's
+// dangerous sink usually lives on a client-side route (e.g. #/search?q=), not
+// the seed page, so every discovered route is probed, plus any link/XHR that
+// carries a query or hash-route (where URL-derived data is most likely read).
+// The seed is always included. The list is deduplicated and capped so a large
+// SPA does not spawn an unbounded number of headless loads.
+func (s *Service) DOMProbeTargets(br *browser.Result, seed string, max int) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(u string) {
+		if u == "" || seen[u] || len(out) >= max {
+			return
+		}
+		seen[u] = true
+		out = append(out, u)
+	}
+	interesting := func(u string) bool {
+		return strings.Contains(u, "#") || strings.Contains(u, "?")
+	}
+	add(seed)
+	if br != nil {
+		for _, r := range br.Routes {
+			add(r)
+		}
+		for _, l := range br.Links {
+			if interesting(l) {
+				add(l)
+			}
+		}
+		for _, x := range br.XHR {
+			if interesting(x) {
+				add(x)
+			}
+		}
+	}
+	return out
+}
+
 // DOMXSS probes a page for DOM-based XSS using headless browser sink
 // instrumentation, recording confirmed source->sink flows as issues.
 func (s *Service) DOMXSS(ctx context.Context, target string) (*browser.DOMResult, error) {

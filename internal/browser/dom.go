@@ -19,6 +19,64 @@ func randToken() string {
 	return hex.EncodeToString(b[:])
 }
 
+// domProbeURL places the canary where client-side code will read it, returning
+// the URL to load. It handles single-page-app hash-routes specially: a target
+// like ".../#/search?q=1" must keep its route (#/search) and carry the canary
+// in the route's own query (#/search?q=CANARY) — overwriting the whole fragment
+// would navigate the SPA away from the vulnerable component and miss the sink.
+// Prototype-pollution gadgets are always added to the real query so a page's
+// query parser merges them.
+func domProbeURL(target, canary string) (string, error) {
+	u, err := url.Parse(target)
+	if err != nil {
+		return "", err
+	}
+	frag := u.Fragment
+
+	q := u.Query()
+	for k := range q {
+		q.Set(k, canary)
+	}
+	// Only seed a default ?q= on a plain page; for a hash-route the canary goes
+	// into the route's query instead (handled below).
+	if len(q) == 0 && !strings.HasPrefix(frag, "/") {
+		q.Set("q", canary)
+	}
+	q.Set("__proto__[lanternfishpp]", "LANTERNFISHPP")
+	q.Set("constructor[prototype][lanternfishpp]", "LANTERNFISHPP")
+	u.RawQuery = q.Encode()
+
+	// Build everything up to the fragment with net/url, then append the fragment
+	// by hand so its "/", "?" and "=" are not percent-encoded (which would break
+	// the SPA route).
+	u.Fragment = ""
+	base := u.String()
+
+	var fragOut string
+	switch {
+	case frag == "":
+		// Classic page: canary in the hash for location.hash / history sinks.
+		fragOut = canary
+	case strings.Contains(frag, "?"):
+		// Hash-route with a query: inject the canary into its query values.
+		route, rawq, _ := strings.Cut(frag, "?")
+		fq, _ := url.ParseQuery(rawq)
+		for k := range fq {
+			fq.Set(k, canary)
+		}
+		if len(fq) == 0 {
+			fq.Set("q", canary)
+		}
+		fragOut = route + "?" + fq.Encode()
+	case strings.HasPrefix(frag, "/"):
+		// Hash-route path with no query: give it one carrying the canary.
+		fragOut = frag + "?q=" + canary
+	default:
+		fragOut = canary
+	}
+	return base + "#" + fragOut, nil
+}
+
 // DOMHit is one dangerous DOM sink that received the canary.
 type DOMHit struct {
 	Sink  string `json:"sink"`
@@ -40,25 +98,10 @@ type DOMResult struct {
 func DOMXSS(target string, settle time.Duration) (*DOMResult, error) {
 	canary := "lanternfishdom" + randToken()
 
-	// Place the canary in the fragment and in every existing query value.
-	u, err := url.Parse(target)
+	probeURL, err := domProbeURL(target, canary)
 	if err != nil {
 		return nil, err
 	}
-	q := u.Query()
-	for k := range q {
-		q.Set(k, canary)
-	}
-	if len(q) == 0 {
-		q.Set("q", canary)
-	}
-	// Prototype-pollution gadgets: client-side query parsers that merge these
-	// into an object pollute Object.prototype. The hook script checks for it.
-	q.Set("__proto__[lanternfishpp]", "LANTERNFISHPP")
-	q.Set("constructor[prototype][lanternfishpp]", "LANTERNFISHPP")
-	u.RawQuery = q.Encode()
-	u.Fragment = canary
-	probeURL := u.String()
 
 	init := strings.ReplaceAll(domHookScript, "__CANARY__", canary)
 	// The prototype-pollution check runs at collection time (after page scripts

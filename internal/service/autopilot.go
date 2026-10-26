@@ -100,18 +100,35 @@ func (s *Service) Autopilot(ctx context.Context, p AutopilotParams) (*AutopilotR
 			add("browser-crawl", "skipped", "no headless Chrome/Edge found")
 			add("dom-xss", "skipped", "no headless Chrome/Edge found")
 		} else {
-			if br, err := s.BrowserCrawl(ctx, p.Target); err != nil {
+			var br *browser.Result
+			if b, err := s.BrowserCrawl(ctx, p.Target); err != nil {
 				add("browser-crawl", "error", err.Error())
 			} else {
+				br = b
 				n := s.auditBrowserFindings(ctx, br, p.Fast)
 				res.RequestsAudited += n
 				add("browser-crawl", "ok", browserDetail(br, n))
 			}
-			if dr, err := s.DOMXSS(ctx, p.Target); err != nil {
-				add("dom-xss", "error", err.Error())
-			} else {
-				add("dom-xss", "ok", pluralIssues(len(dr.Hits))+" (DOM sinks)")
+			// Probe the seed and every discovered SPA route/query-bearing URL:
+			// a single-page app's dangerous sink usually lives on a client-side
+			// route, not the landing page.
+			targets := s.DOMProbeTargets(br, p.Target, domProbeBudget(p.Fast))
+			hits, failed := 0, 0
+			for _, t := range targets {
+				if ctx.Err() != nil {
+					break
+				}
+				if dr, err := s.DOMXSS(ctx, t); err != nil {
+					failed++
+				} else {
+					hits += len(dr.Hits)
+				}
 			}
+			detail := pluralIssues(hits) + " across " + strconv.Itoa(len(targets)) + " route(s)"
+			if failed > 0 {
+				detail += " (" + strconv.Itoa(failed) + " failed)"
+			}
+			add("dom-xss", "ok", detail)
 		}
 	}
 
@@ -252,6 +269,16 @@ func pluralIssues(n int) string {
 func crawlDetail(cr *CrawlResult) string {
 	return itoa(cr.PagesVisited) + " pages, " + itoa(len(cr.URLsFound)) + " URLs, " +
 		itoa(cr.Forms) + " forms; " + pluralIssues(cr.IssuesFound) + " while auditing"
+}
+
+// domProbeBudget caps how many URLs the DOM-XSS stage loads in a headless
+// browser. Each probe costs a page load plus a settle window, so --fast keeps
+// it small; a normal run trades time for coverage of a SPA's routes.
+func domProbeBudget(fast bool) int {
+	if fast {
+		return 8
+	}
+	return 25
 }
 
 func browserDetail(br *browser.Result, audited int) string {
