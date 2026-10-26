@@ -11,6 +11,7 @@ import (
 	"context"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"lanternfish/internal/httpmsg"
@@ -219,10 +220,40 @@ func (c *Collector) Add(issues ...*Issue) {
 
 // Issues returns the collected issues sorted by descending severity.
 func (c *Collector) Issues() []*Issue {
-	out := append([]*Issue(nil), c.issues...)
+	out := suppressAmbiguousInjection(c.issues)
+	out = append([]*Issue(nil), out...)
 	sort.SliceStable(out, func(i, j int) bool {
 		return out[i].Severity > out[j].Severity
 	})
+	return out
+}
+
+// suppressAmbiguousInjection drops boolean-differential XPath/LDAP findings on a
+// param that also has a SQL-injection finding. A tautology-vs-contradiction
+// differential (e.g. "' or '1'='1") is valid in SQL, XPath and LDAP alike, so
+// on a SQL backend the XPath/LDAP boolean checks fire on the same signal and
+// mislabel the bug. A SQLi finding (error-, boolean- or time-based) is the
+// stronger, more specific evidence, so it wins; error-based XPath/LDAP findings
+// (which match real engine error text) are never suppressed.
+func suppressAmbiguousInjection(in []*Issue) []*Issue {
+	sqliParam := map[string]bool{}
+	for _, is := range in {
+		if strings.HasPrefix(is.Check, "sqli-") {
+			sqliParam[is.URL+"\x00"+is.Param] = true
+		}
+	}
+	if len(sqliParam) == 0 {
+		return in
+	}
+	out := in[:0:0]
+	for _, is := range in {
+		ambiguous := (is.Check == "xpath-injection" || is.Check == "ldap-injection") &&
+			strings.Contains(is.Name, "(boolean)")
+		if ambiguous && sqliParam[is.URL+"\x00"+is.Param] {
+			continue // yields to the confirmed SQL injection on this param
+		}
+		out = append(out, is)
+	}
 	return out
 }
 

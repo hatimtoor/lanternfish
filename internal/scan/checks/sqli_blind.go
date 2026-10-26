@@ -28,12 +28,20 @@ func (BooleanBlindSQLi) Active(ctx context.Context, s scan.Sender, base *httpmsg
 	baseLen := b.length
 	baseStatus := b.status
 
-	// Pairs of (true, false) conditions across quoting styles.
+	// Pairs of (true, false) conditions across quoting styles. The OR-true /
+	// AND-false pairs are essential for LIKE-context injection (e.g. a search
+	// query "... name LIKE '%<q>%' ..."): there "' OR '1'='1" makes the LIKE
+	// match everything (true ≈ baseline) while "' AND '1'='2" collapses to no
+	// rows (false differs). AND/AND pairs alone miss this because the trailing
+	// "%'" of the LIKE pattern breaks the tautology.
 	pairs := []struct{ t, f string }{
 		{p.Base + "' AND '1'='1", p.Base + "' AND '1'='2"},
 		{p.Base + "\" AND \"1\"=\"1", p.Base + "\" AND \"1\"=\"2"},
 		{p.Base + " AND 1=1", p.Base + " AND 1=2"},
 		{p.Base + "') AND ('1'='1", p.Base + "') AND ('1'='2"},
+		{p.Base + "' OR '1'='1", p.Base + "' AND '1'='2"},
+		{p.Base + "') OR ('1'='1", p.Base + "') AND ('1'='2"},
+		{p.Base + "\" OR \"1\"=\"1", p.Base + "\" AND \"1\"=\"2"},
 	}
 	for _, pr := range pairs {
 		if ctx.Err() != nil {

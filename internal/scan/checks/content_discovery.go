@@ -54,15 +54,25 @@ func (ContentDiscovery) Request(ctx context.Context, s scan.Sender, base *httpms
 		if err != nil || resp == nil || resp.StatusCode != 200 {
 			continue
 		}
-		// If the site returns 200 for everything, require the signal content.
+		// When a random path already returns 200, this host serves a catch-all
+		// fallback (common for SPAs, which return index.html for every route).
+		// A hit is only real if it is clearly NOT that fallback page:
+		//   1. it must differ in size from the baseline shell, and
+		//   2. it must contain the file-specific signal.
+		// Weak signals like "=" or ":" appear in any HTML, so the size check is
+		// what actually distinguishes a real file from the Angular shell.
 		if baseStatus == 200 {
+			if baseLen >= 0 && similarLen(len(resp.Body), baseLen) {
+				continue // identical to the catch-all fallback, not a real file
+			}
 			if sp.signal == "" || !strings.Contains(resp.BodyString(), sp.signal) {
 				continue
 			}
-		}
-		// Avoid flagging when the hit is identical to the catch-all baseline.
-		if baseLen >= 0 && similarLen(len(resp.Body), baseLen) && sp.signal != "" && !strings.Contains(resp.BodyString(), sp.signal) {
-			continue
+			// A config/secret/backup file is never served as HTML; a text/html
+			// body on a catch-all host is the fallback wearing a different size.
+			if strings.Contains(resp.ContentType(), "html") && sp.signal != "Apache Server Status" && sp.signal != "phpinfo()" {
+				continue
+			}
 		}
 		issues = append(issues, &scan.Issue{
 			Check: "content-discovery", Name: "Sensitive file exposed: " + sp.path,
