@@ -13,16 +13,21 @@ type ExposedSecrets struct{}
 func (ExposedSecrets) ID() string { return "exposed-secrets" }
 
 var secretPatterns = []struct {
-	name string
-	re   *regexp.Regexp
+	name         string
+	re           *regexp.Regexp
+	skipAuthPath bool // skip on login/token endpoints where returning this is expected
 }{
-	{"AWS access key id", regexp.MustCompile(`AKIA[0-9A-Z]{16}`)},
-	{"Google API key", regexp.MustCompile(`AIza[0-9A-Za-z\-_]{35}`)},
-	{"Slack token", regexp.MustCompile(`xox[baprs]-[0-9A-Za-z-]{10,}`)},
-	{"private key block", regexp.MustCompile(`-----BEGIN (?:RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----`)},
-	{"JSON Web Token", regexp.MustCompile(`eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`)},
-	{"GitHub token", regexp.MustCompile(`gh[pousr]_[0-9A-Za-z]{36}`)},
+	{"AWS access key id", regexp.MustCompile(`AKIA[0-9A-Z]{16}`), false},
+	{"Google API key", regexp.MustCompile(`AIza[0-9A-Za-z\-_]{35}`), false},
+	{"Slack token", regexp.MustCompile(`xox[baprs]-[0-9A-Za-z-]{10,}`), false},
+	{"private key block", regexp.MustCompile(`-----BEGIN (?:RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----`), false},
+	{"JSON Web Token", regexp.MustCompile(`eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`), true},
+	{"GitHub token", regexp.MustCompile(`gh[pousr]_[0-9A-Za-z]{36}`), false},
 }
+
+// authPathRe matches endpoints whose job is to issue a token/session, where a
+// JWT in the response is expected rather than a leak.
+var authPathRe = regexp.MustCompile(`(?i)/(login|logon|sign-?in|auth|authenticate|oauth|token|session|connect|refresh)`)
 
 func (ExposedSecrets) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 	if tx.Response == nil {
@@ -30,8 +35,12 @@ func (ExposedSecrets) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 	}
 	body := tx.Response.BodyString()
 	url := tx.Request.AbsoluteURL().String()
+	authPath := authPathRe.MatchString(tx.Request.AbsoluteURL().Path)
 	var issues []*scan.Issue
 	for _, p := range secretPatterns {
+		if p.skipAuthPath && authPath {
+			continue // a token returned by a login/token endpoint is expected, not a leak
+		}
 		if m := p.re.FindString(body); m != "" {
 			issues = append(issues, &scan.Issue{
 				Check: "exposed-secrets", Name: "Exposed secret: " + p.name,

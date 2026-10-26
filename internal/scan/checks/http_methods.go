@@ -35,18 +35,28 @@ func (DangerousMethods) Request(ctx context.Context, s scan.Sender, base *httpms
 	if len(risky) == 0 {
 		return nil
 	}
-	sev := scan.SeverityLow
+	// TRACE and CONNECT are dangerous regardless of app type (cross-site tracing,
+	// proxy abuse). PUT/DELETE/PATCH are ordinary REST methods — merely
+	// advertising them is informational, not a vulnerability, so they do not
+	// raise the severity (this keeps API scans from flagging the API itself).
+	sev := scan.SeverityInfo
 	for _, m := range risky {
-		if m == "PUT" || m == "DELETE" || m == "TRACE" {
+		if m == "TRACE" || m == "CONNECT" {
 			sev = scan.SeverityMedium
 		}
 	}
+	detail := "The server advertises these HTTP methods via OPTIONS: " + strings.Join(risky, ", ") + "."
+	if sev == scan.SeverityMedium {
+		detail += " TRACE enables cross-site tracing and CONNECT can be abused as a proxy."
+	} else {
+		detail += " PUT/DELETE/PATCH are normal for REST APIs but should be confirmed to enforce authorization."
+	}
 	return []*scan.Issue{{
-		Check: "dangerous-http-methods", Name: "Dangerous HTTP methods enabled",
+		Check: "dangerous-http-methods", Name: "Uncommon HTTP methods advertised",
 		URL:      base.AbsoluteURL().String(),
 		Severity: sev, Confidence: scan.ConfidenceFirm,
-		Detail:      "The server advertises potentially dangerous HTTP methods: " + strings.Join(risky, ", ") + ". TRACE enables cross-site tracing; PUT/DELETE may allow unauthorized content changes.",
-		Remediation: "Disable unused methods; restrict PUT/DELETE and disable TRACE at the web server.",
+		Detail:      detail,
+		Remediation: "Disable methods the application does not use; disable TRACE and CONNECT at the web server; ensure PUT/DELETE/PATCH enforce authorization.",
 		Evidence:    "Allow: " + allow, CWE: "CWE-650",
 	}}
 }

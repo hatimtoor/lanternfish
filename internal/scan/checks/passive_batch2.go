@@ -145,7 +145,7 @@ func (AdditionalHeaders) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 			Check: "additional-headers", Name: "Missing Referrer-Policy",
 			URL: tx.Request.AbsoluteURL().String(), Severity: scan.SeverityInfo, Confidence: scan.ConfidenceFirm,
 			Detail:      "No Referrer-Policy header; full URLs (possibly with tokens) may leak to third parties via the Referer header.",
-			Remediation: "Set a Referrer-Policy such as strict-origin-when-cross-origin.", CWE: "CWE-200",
+			Remediation: "Set a Referrer-Policy such as strict-origin-when-cross-origin.", CWE: "CWE-200", HostScoped: true,
 		})
 	}
 	if tx.Response.Header.Get("Permissions-Policy") == "" {
@@ -153,7 +153,7 @@ func (AdditionalHeaders) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 			Check: "additional-headers", Name: "Missing Permissions-Policy",
 			URL: tx.Request.AbsoluteURL().String(), Severity: scan.SeverityInfo, Confidence: scan.ConfidenceFirm,
 			Detail:      "No Permissions-Policy header to restrict powerful browser features (camera, geolocation, etc.).",
-			Remediation: "Set a Permissions-Policy limiting features the app does not use.", CWE: "CWE-16",
+			Remediation: "Set a Permissions-Policy limiting features the app does not use.", CWE: "CWE-16", HostScoped: true,
 		})
 	}
 	return issues

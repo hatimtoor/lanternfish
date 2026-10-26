@@ -30,6 +30,7 @@ func (SecurityHeaders) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 			Check: "security-headers", Name: name, URL: url,
 			Severity: sev, Confidence: scan.ConfidenceFirm,
 			Detail: detail, Remediation: rem, CWE: cwe,
+			HostScoped: true, // missing security headers are a site-wide config fact
 		})
 	}
 

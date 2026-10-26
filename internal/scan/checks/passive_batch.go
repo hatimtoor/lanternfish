@@ -50,7 +50,7 @@ func (BannerDisclosure) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 		v := tx.Response.Header.Get(h)
 		if v != "" && versionish.MatchString(v) {
 			issues = append(issues, &scan.Issue{
-				Check: "banner-disclosure", Name: "Software version disclosure",
+				Check: "banner-disclosure", Name: "Software version disclosure", HostScoped: true,
 				URL: tx.Request.AbsoluteURL().String(), Severity: scan.SeverityInfo, Confidence: scan.ConfidenceFirm,
 				Detail:      "The response header " + h + " reveals software and version, aiding targeted exploitation.",
 				Remediation: "Suppress or genericize version banners in response headers.",

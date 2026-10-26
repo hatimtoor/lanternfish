@@ -26,6 +26,7 @@ type regexPassive struct {
 	// do not inherit "this is a leaked secret" text.
 	detail      string
 	remediation string
+	hostScoped  bool // report once per host (e.g. a tech fingerprint), not per URL
 }
 
 func (r regexPassive) ID() string { return r.id }
@@ -66,6 +67,7 @@ func (r regexPassive) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 		Detail:      detail,
 		Remediation: rem,
 		Evidence:    ev, CWE: orCWE(r.cwe, "CWE-200"),
+		HostScoped:  r.hostScoped,
 	}}
 }
 

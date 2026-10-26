@@ -113,7 +113,7 @@ func (WeakHSTS) Passive(tx *httpmsg.Transaction) []*scan.Issue {
 		return nil
 	}
 	return []*scan.Issue{{
-		Check: "hsts-weak", Name: "Weak HSTS policy", URL: tx.Request.AbsoluteURL().String(),
+		Check: "hsts-weak", Name: "Weak HSTS policy", URL: tx.Request.AbsoluteURL().String(), HostScoped: true,
 		Severity: scan.SeverityLow, Confidence: scan.ConfidenceFirm,
 		Detail:      "Strict-Transport-Security is set but weak: " + strings.Join(problems, "; ") + ".",
 		Remediation: "Use Strict-Transport-Security: max-age=31536000; includeSubDomains (and preload once verified).",

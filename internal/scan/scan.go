@@ -77,6 +77,12 @@ type Issue struct {
 	Evidence    string     `json:"evidence,omitempty"`
 	CWE         string     `json:"cwe,omitempty"`
 	FoundAt     time.Time  `json:"found_at"`
+
+	// HostScoped marks a finding that is a property of the whole host (a server
+	// banner, a tech fingerprint, a site-wide missing header) rather than of one
+	// URL. The collector de-duplicates these per host so they are reported once,
+	// not repeated on every endpoint. Not serialized.
+	HostScoped bool `json:"-"`
 }
 
 // finalize fills the string projections used in JSON output.
@@ -191,7 +197,17 @@ func (c *Collector) Add(issues ...*Issue) {
 		if is == nil {
 			continue
 		}
-		key := is.Check + "\x00" + is.URL + "\x00" + is.Param
+		// De-dup key. The Name is included so distinct findings of one check
+		// (e.g. "Missing CSP" vs "Missing nosniff" from security-headers) are not
+		// collapsed together. Host-scoped findings key on the host instead of the
+		// full URL, so a site-wide fact is reported once rather than per endpoint.
+		scope := is.URL
+		if is.HostScoped {
+			if u, err := url.Parse(is.URL); err == nil && u.Host != "" {
+				scope = u.Scheme + "://" + u.Host
+			}
+		}
+		key := is.Check + "\x00" + is.Name + "\x00" + scope + "\x00" + is.Param
 		if c.seen[key] {
 			continue
 		}
