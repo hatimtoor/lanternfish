@@ -581,6 +581,7 @@ func cmdCrawl(args []string) {
 	audit := fs.Bool("audit", false, "actively scan discovered requests")
 	maxPages := fs.Int("max", 100, "max pages to crawl")
 	depth := fs.Int("depth", 3, "max link depth")
+	useBrowser := fs.Bool("browser", false, "use a headless browser crawl (SPA routes, search inputs)")
 	asJSON := fs.Bool("json", false, "emit JSON")
 	pos := mustParse(fs, args)
 
@@ -599,6 +600,31 @@ func cmdCrawl(args []string) {
 
 	ctx, cancel := signalContext()
 	defer cancel()
+
+	// Headless browser crawl: shows the SPA links/XHR/routes a JS-rendered page
+	// exposes (including routes reached by driving search inputs), which is what
+	// the DOM-XSS stage probes. Useful for diagnosing SPA route discovery.
+	if *useBrowser {
+		if !browser.Available() {
+			log.Fatal("crawl --browser: no Chromium-family browser found")
+		}
+		br, err := svc.BrowserCrawl(ctx, seed)
+		if err != nil {
+			log.Fatalf("crawl --browser: %v", err)
+		}
+		if *asJSON {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			_ = enc.Encode(map[string]any{"browser": br})
+			return
+		}
+		fmt.Printf("browser crawl of %s: %d link(s), %d XHR, %d route(s)\n", seed, len(br.Links), len(br.XHR), len(br.Routes))
+		for _, r := range br.Routes {
+			fmt.Printf("  route: %s\n", r)
+		}
+		return
+	}
+
 	res := svc.Crawl(ctx, service.CrawlParams{Seeds: []string{seed}, MaxPages: *maxPages, MaxDepth: *depth, Audit: *audit})
 
 	if *asJSON {

@@ -73,10 +73,18 @@ const collectScript = `(function(){
 // navigation side effect.
 const driveSearchScript = `
   var __lfSleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+  var __lfInputSel='input[type=search],input[id*="search" i],input[name*="search" i],input[aria-label*="search" i],input[placeholder*="search" i],input[class*="search" i],[role=searchbox]';
+  var __lfGather=function(){ var seen=[],out=[]; try{ [].slice.call(document.querySelectorAll(__lfInputSel)).forEach(function(el){ if(el.tagName==='INPUT'&&seen.indexOf(el)<0){seen.push(el);out.push(el);} }); }catch(e){} return out; };
   try{
-    var __lfSel=['input[type=search]','input[id*="search" i]','input[name*="search" i]','input[aria-label*="search" i]','input[placeholder*="search" i]','[role=searchbox]'];
-    var __lfSeen=[], __lfInputs=[];
-    __lfSel.forEach(function(s){ try{ [].slice.call(document.querySelectorAll(s)).forEach(function(el){ if(__lfSeen.indexOf(el)<0){__lfSeen.push(el);__lfInputs.push(el);} }); }catch(e){} });
+    // Many SPAs collapse the search box behind an icon/button (e.g. Angular
+    // Material mat-search-bar), so the input is inert until opened. Click
+    // likely search toggles first, then re-query for the revealed input.
+    try{
+      var __lfTog=[].slice.call(document.querySelectorAll('button[aria-label*="search" i],[mattooltip*="search" i],button[class*="search" i],[class*="searchButton" i],[id*="searchButton" i],mat-icon[class*="search" i]'));
+      for(var __t=0;__t<Math.min(__lfTog.length,2);__t++){ try{ __lfTog[__t].click(); }catch(e){} }
+    }catch(e){}
+    await __lfSleep(250);
+    var __lfInputs=__lfGather();
     for(var __i=0;__i<Math.min(__lfInputs.length,3);__i++){
       var __el=__lfInputs[__i];
       try{
