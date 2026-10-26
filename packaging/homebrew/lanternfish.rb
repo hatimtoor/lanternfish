@@ -3,28 +3,28 @@
 class Lanternfish < Formula
   desc "Free web security testing toolkit that teaches as it goes (authorized testing only)"
   homepage "https://github.com/hatimtoor/lanternfish"
-  version "0.5.0"
+  version "0.5.1"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/hatimtoor/lanternfish/releases/download/v0.5.0/lanternfish_v0.5.0_darwin_arm64"
-      sha256 "c3b501df6ac67285019d8e6924b77dae6de55d4d5a91ecfdea1e671a34078854"
+      url "https://github.com/hatimtoor/lanternfish/releases/download/v0.5.1/lanternfish_v0.5.1_darwin_arm64"
+      sha256 "7e66ca075445cc82b639f907bdb2b9823d1543bbe88e276135c50e6d3e91a85b"
     end
     on_intel do
-      url "https://github.com/hatimtoor/lanternfish/releases/download/v0.5.0/lanternfish_v0.5.0_darwin_amd64"
-      sha256 "b7c6aef9b66fe541b43dab1156417eb99df82c1a78648a27d71b345115ba91ed"
+      url "https://github.com/hatimtoor/lanternfish/releases/download/v0.5.1/lanternfish_v0.5.1_darwin_amd64"
+      sha256 "3dfbd2b516725b07b36d3338632d446346f210f9ed4f8ead6fa114f2c92408b0"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/hatimtoor/lanternfish/releases/download/v0.5.0/lanternfish_v0.5.0_linux_arm64"
-      sha256 "ab92b39ab84547c5e39d18eccc0a4b1abffac2b291fc3198c9e9d2203a47aa00"
+      url "https://github.com/hatimtoor/lanternfish/releases/download/v0.5.1/lanternfish_v0.5.1_linux_arm64"
+      sha256 "6320134be53af658b874a59885756a0a07fcca0d29187b44c17c948348df463a"
     end
     on_intel do
-      url "https://github.com/hatimtoor/lanternfish/releases/download/v0.5.0/lanternfish_v0.5.0_linux_amd64"
-      sha256 "6970fb5eae177e833251e5de077c02c8cc0ae625e7b86818160e8ca20ca01750"
+      url "https://github.com/hatimtoor/lanternfish/releases/download/v0.5.1/lanternfish_v0.5.1_linux_amd64"
+      sha256 "beb19495896edd81d0e1683a60d9a38b370d596c1867135539dbb26a3c6bc9f8"
     end
   end
 
