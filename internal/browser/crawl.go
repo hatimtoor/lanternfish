@@ -36,10 +36,18 @@ window.__lanternfish_routes = [];
   var push=function(u){try{window.__lanternfish_xhr.push(new URL(u, location.href).href)}catch(e){}};
   var of=window.fetch; if(of){window.fetch=function(i){try{push(typeof i==='string'?i:(i&&i.url))}catch(e){} return of.apply(this,arguments)}}
   var oo=XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open=function(m,u){push(u); return oo.apply(this,arguments)};
-  var route=function(u){try{window.__lanternfish_routes.push(new URL(u, location.href).href)}catch(e){}};
+  // Hash-route detection is a sticky flag, not a single snapshot: an Angular
+  // (etc.) app rewrites "/" to "/#/" during bootstrap, so a one-time check at
+  // collection races the router and intermittently misses it, leaving routes
+  // in bare server-path form. Record it the instant location ever carries a
+  // "#/" segment, poll briefly across bootstrap, and keep it set thereafter.
+  window.__lanternfish_hashrouted = false;
+  var markHash=function(){try{if(/#\//.test(location.href)) window.__lanternfish_hashrouted=true;}catch(e){}};
+  var route=function(u){try{window.__lanternfish_routes.push(new URL(u, location.href).href);markHash();}catch(e){}};
   var ps=history.pushState; history.pushState=function(s,t,u){try{if(u)route(u)}catch(e){} return ps.apply(this,arguments)};
   var rs=history.replaceState; history.replaceState=function(s,t,u){try{if(u)route(u)}catch(e){} return rs.apply(this,arguments)};
   window.addEventListener('hashchange',function(){route(location.href)});
+  markHash(); var __hp=setInterval(markHash,100); setTimeout(function(){clearInterval(__hp)},4000);
 })();`
 
 // collectScript returns a JSON string of links/forms/xhr/routes from the loaded
@@ -55,7 +63,7 @@ const collectScript = `(function(){
   // value like "/search" must be probed as "#/search", not the server path
   // "/search" (which just renders the default page). Detect hash routing from
   // the loaded URL or any #/ anchor, and map bare route paths into hash form.
-  var hashRouted = /#\//.test(location.href) || !![].slice.call(document.querySelectorAll('a[href^="#/"],a[href^="#!"]')).length;
+  var hashRouted = !!window.__lanternfish_hashrouted || /#\//.test(location.href) || !![].slice.call(document.querySelectorAll('a[href^="#/"],a[href^="#!"]')).length;
   var toRoute=function(h){
     if(!h) return null;
     if(/^[a-z][a-z0-9+.-]*:/i.test(h) || h.charAt(0)==='#') return abs(h); // absolute or already a hash-route

@@ -510,7 +510,10 @@ func (s *Service) DOMProbeTargets(br *browser.Result, seed string, max int) []st
 // DOMXSS probes a page for DOM-based XSS using headless browser sink
 // instrumentation, recording confirmed source->sink flows as issues.
 func (s *Service) DOMXSS(ctx context.Context, target string) (*browser.DOMResult, error) {
-	res, err := browser.DOMXSS(target, 0)
+	// A SPA sink often receives the canary only after an async round-trip
+	// (route change -> API fetch -> render into innerHTML), so give the page
+	// longer than the crawl default to settle before snapshotting the sinks.
+	res, err := browser.DOMXSS(target, 2500*time.Millisecond)
 	if err != nil {
 		return nil, err
 	}
